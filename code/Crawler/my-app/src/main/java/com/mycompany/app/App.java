@@ -4,10 +4,11 @@ package com.mycompany.app;
  * Hello world!
  *
  */
-public class Crawler 
+public class App 
 {
     public static void main( String[] args )
     {
-        System.out.println( "Hello World!" );
+    	int threadsNum=args[1].parseInt();
+        System.out.println( "Crawler started with"+ );
     }
 }
