@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import App from './App';
 import './index.css';
-import Crowler from './App';
 
 ReactDOM.render(
-  <Crowler />,
+  <App />,
   document.getElementById('root')
 );
