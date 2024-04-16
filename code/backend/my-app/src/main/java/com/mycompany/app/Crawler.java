@@ -20,10 +20,13 @@ import java.util.HashMap;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-/**
+
+ /*
+ *
  * Hello world!
  *
  */
+
 public class Crawler implements Runnable 
 {
 
