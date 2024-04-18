@@ -1,0 +1,46 @@
+[
+    "Word Collection(Inverted Index)",
+    [
+        {
+            "Word": "sport",
+            "Pages": [
+                {
+                    "Doc_id": "",
+                    "Type": "//NOT SURE: but for example header 1 => 1 , header 2 => 2, body=> 4",
+                    "Frequency": "",
+                    "TF  (number of times the term appears in the documnet / total number of terms in the documnet)": "",
+                    "Rank (TF-IDF => معناهم اضربهم في بعض مش اطرحهم)": ""
+                }
+            ],
+            "IDF ( log (عدد الصفحات الكلي 6000 / عدد الصفحات اللي ظهرت فيها الكلمة ) )": ""
+        }
+    ],
+    "Page Collection(Forwards Index)",
+    [
+        {
+            "Doc_Id": "",
+            "Link": "",
+            "Title": "",
+            "HTML": "",
+            "Content": "",
+            "Description": ""
+        }
+    ],
+    "Preivous Search(Query Suggestion)",
+    [
+        {
+            "Word": "",
+            "Frequency": "",
+            "Related Words": []
+        }
+    ],
+    "Retrieved Data(React Interface)",
+    [
+        {
+            "_ID": "",
+            "URL": "",
+            "Title": "",
+            "Snippit": ""
+        }
+    ]
+]
