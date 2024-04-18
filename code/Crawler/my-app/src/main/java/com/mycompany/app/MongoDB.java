@@ -36,14 +36,18 @@ public class MongoDB {
     MongoCollection<Document> pageCollection;
     MongoCollection<Document> wordCollection;
     MongoCollection<Document> historyCollection;
+    MongoCollection<Document> retrievedCollection;
+    MongoCollection<Document> testCollection;
 
 
     public void initializeDatabaseConnection() {
-        mongoClient = MongoClients.create();
-        database = mongoClient.getDatabase("Crowler");
-        pageCollection = database.getCollection("Pages");
-        wordCollection = database.getCollection("Words");
+        mongoClient = MongoClients.create("mongodb+srv://user2000:1234@cluster0.ayv9gt9.mongodb.net/");
+        database = mongoClient.getDatabase("SearchEngin");
+        pageCollection = database.getCollection("Page");
+        wordCollection = database.getCollection("Word");
         historyCollection = database.getCollection("History");
+        retrievedCollection = database.getCollection("Retrieved");
+        testCollection = database.getCollection("Test");
 
         System.out.println("Connected to Database successfully");
     }
@@ -52,17 +56,34 @@ public class MongoDB {
     public void insertOne(Document doc, String collectionName) {
         InsertOneResult result;
         switch (collectionName) {
-            case "Pages":
+            case "Page":
                 result = pageCollection.insertOne(doc);
-                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
-            case "Words":
+            case "Word":
                 result = wordCollection.insertOne(doc);
-                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
             case "History":
                 result = historyCollection.insertOne(doc);
-                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
+                break;
+            case "Retrieved":
+                result = retrievedCollection.insertOne(doc);
+                break;
+        }
+    }
+
+    public void dropCollection(String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                pageCollection.drop();
+                break;
+            case "Word":
+                wordCollection.drop();
+                break;
+            case "History":
+                historyCollection.drop();
+                break;
+            case "Retrieved":
+                retrievedCollection.drop();
                 break;
         }
     }
