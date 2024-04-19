@@ -1,14 +1,16 @@
 package com.mycompany.app;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.*;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Projections;
 import org.bson.BsonValue;
 import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
 
-import java.util.Objects;
+import static com.mongodb.client.model.Projections.*;
+
+import java.util.*;
+import java.lang.Object;
 
 import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
@@ -27,7 +29,7 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import com.mongodb.MongoException;
 
-import java.util.Arrays;
+import javax.print.Doc;
 
 
 public class MongoDB {
@@ -86,6 +88,35 @@ public class MongoDB {
                 retrievedCollection.drop();
                 break;
         }
+    }
+
+    Set<String> searchPhrase(String phrase) {
+        String[] words = phrase.split("\\s+");
+        Set<String> commonLinks = new HashSet<>();
+        List<String> returnedLinks = new ArrayList<>();
+        for (String st : words) {
+            returnedLinks = getPages(st);
+            if (commonLinks.isEmpty()) {
+                commonLinks.addAll(returnedLinks);
+            } else {
+                commonLinks.retainAll(new HashSet<>(returnedLinks));
+            }
+        }
+        return commonLinks;
+    }
+
+    List<String> getPages(String word) {
+        List<String> pages = new ArrayList<>();
+        FindIterable<Document> pageDocs;
+        Bson filter = Filters.eq("Word", word);
+        Bson projection = fields(include("Pages.Link"), excludeId());
+        pageDocs = wordCollection.find(filter).projection(projection);
+
+        List<Document> linkDocs = (List<Document>) (pageDocs.first().get("Pages"));
+        for (Document doc2 : linkDocs) {
+            pages.add(doc2.get("Link", String.class));
+        }
+        return pages;
     }
 
     public void closeConnection() {
