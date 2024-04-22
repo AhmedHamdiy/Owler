@@ -1,12 +1,14 @@
 package com.mycompany.app;
 
 import com.mongodb.client.*;
+import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import org.bson.BsonValue;
 import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
 
+import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Projections.*;
 
 import java.util.*;
@@ -18,6 +20,8 @@ import org.bson.types.ObjectId;
 
 import java.io.*;
 
+import static com.mongodb.client.model.Updates.set;
+import static java.lang.Math.log;
 import static java.lang.System.*;
 import static com.mongodb.MongoClientSettings.getDefaultCodecRegistry;
 import static com.mongodb.client.model.Filters.eq;
@@ -43,7 +47,9 @@ public class MongoDB {
 
 
     public void initializeDatabaseConnection() {
-        mongoClient = MongoClients.create("mongodb+srv://user2000:1234@cluster0.ayv9gt9.mongodb.net/");
+        // mongoClient = MongoClients.create("mongodb+srv://user2000:1234@cluster0.ayv9gt9.mongodb.net/");
+        mongoClient = MongoClients.create();
+
         database = mongoClient.getDatabase("SearchEngin");
         pageCollection = database.getCollection("Page");
         wordCollection = database.getCollection("Word");
@@ -118,6 +124,81 @@ public class MongoDB {
         }
         return pages;
     }
+
+    void updateIDF() {
+        Bson projection = fields(include("Word", "No_pages"), excludeId());
+        MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
+        int totalPages = 6000;
+        while (cursor.hasNext()) {
+            Document doc = cursor.next();
+            int No_pages = doc.getInteger("No_pages");
+            double idf = log(6000.0 / No_pages);
+            Bson filter = Filters.eq("Word", doc.getString("Word"));
+            wordCollection.updateOne(filter, set("IDF", idf));
+        }
+    }
+
+    void updateTF() {
+        Bson projection = fields(include("Word", "Pages"), excludeId());
+        MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
+        while (cursor.hasNext()) {
+            Document doc = cursor.next();
+            String word = doc.getString("Word");
+            Object obj = doc.get("Pages");
+
+            for (Document d : (List<Document>) obj) {
+                int frequency = d.getInteger("Frequency");
+                int totalWords = d.getInteger("Total_Words");
+                Bson filter = Filters.and(eq("Word", word), eq("Pages.Doc_Id", d.getInteger("Doc_Id")));
+                wordCollection.updateOne(filter, set("Pages.$.TF", (double) frequency / totalWords));
+            }
+        }
+
+
+    }
+
+    void updateRank() {
+        Bson projection = fields(include("Word", "IDF", "Pages.Doc_Id", "Pages.TF", "Pages.Rank"), excludeId());
+        MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
+        while (cursor.hasNext()) {
+            Document doc = cursor.next();
+            System.out.println(doc.toJson());
+            String word = doc.getString("Word");
+            double IDF = doc.getDouble("IDF");
+            for (Document d1 : (List<Document>) doc.get("Pages")) {
+                Bson f = Filters.and(eq("Word", word), eq("Pages.Doc_Id", d1.getInteger("Doc_Id")));
+                double TF = d1.getDouble("TF");
+                double rank = IDF * TF;
+                wordCollection.updateOne(f, set("Pages.$.Rank", rank));
+            }
+        }
+    }
+
+    HashMap<String, Double> getQueryRelevance(String query) {
+        String[] queryWords = query.split("\\s+");
+        HashMap<String, Double> map = new HashMap<String, Double>();
+        for (String word : queryWords) {
+            Bson filter = Filters.eq("Word", word);
+            Bson projection = fields(include("Pages.Rank", "Pages.Doc_Id", "Pages.Link"), excludeId());
+            MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
+            while (cursor.hasNext()) {
+                Document doc = cursor.next();
+                Object obj = doc.get("Pages");
+                for(Document d:(List<Document>)obj)
+                {
+                    String link = d.getString("Link");
+                    Double rank = d.getDouble("Rank");
+                    Double prev = map.get(link);
+                    if ( prev == null)
+                        map.put(link, rank);
+                    else
+                        map.put(link, rank + prev);
+                }
+            }
+        }
+        return map;
+    }
+
 
     public void closeConnection() {
         mongoClient.close();
