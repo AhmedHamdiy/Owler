@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="555119a7-252e-4d39-aa53-a4376fc83fba" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/main/java/com/mycompany/app/Crawler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/mycompany/app/MongoDB.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/mycompany/app/MongoDB.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/mycompany/app/Robot.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../target/classes/com/mycompany/app/Crawler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../target/classes/com/mycompany/app/MongoDB.class" beforeDir="false" afterPath="$PROJECT_DIR$/../target/classes/com/mycompany/app/MongoDB.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../target/classes/com/mycompany/app/Robot.class" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../../.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 8
+}]]></component>
+  <component name="ProjectId" id="2fOAdvkh68KFLRZLeWjc661PZ2q" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "multithreaded-crawler",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/media/ahmed/Programming/Programming/Projects/web/APT/Crowler/code/backend/my-app/src"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="jdk-11.0.22-corretto-11.0.22-4caba194b151-bfa3237e" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="555119a7-252e-4d39-aa53-a4376fc83fba" name="Changes" comment="" />
+      <created>1713661841711</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1713661841711</updated>
+    </task>
+    <servers />
+  </component>
+</project>
