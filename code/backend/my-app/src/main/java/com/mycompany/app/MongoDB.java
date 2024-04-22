@@ -4,6 +4,10 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.Sorts;
+
 import org.bson.BsonValue;
 import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
@@ -27,6 +31,7 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import com.mongodb.MongoException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 
@@ -36,6 +41,9 @@ public class MongoDB {
     MongoCollection<Document> pageCollection;
     MongoCollection<Document> wordCollection;
     MongoCollection<Document> historyCollection;
+    MongoCollection<Document> retrievedCollection;
+    MongoCollection<Document> visitedCollection;
+    MongoCollection<Document> toVisitCollection;
 
 
     public void initializeDatabaseConnection() {
@@ -44,6 +52,9 @@ public class MongoDB {
         pageCollection = database.getCollection("Pages");
         wordCollection = database.getCollection("Words");
         historyCollection = database.getCollection("History");
+        toVisitCollection = database.getCollection("ToVisit");
+        visitedCollection = database.getCollection("Visited");
+        retrievedCollection = database.getCollection("Retrieved");
 
         System.out.println("Connected to Database successfully");
     }
@@ -64,7 +75,88 @@ public class MongoDB {
                 result = historyCollection.insertOne(doc);
                 System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
+            case "Retrieved":
+                result = retrievedCollection.insertOne(doc);
+                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
+                break;
+            case "Visited":
+                result = visitedCollection.insertOne(doc);
+                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
+                break;
+            case "ToVisit":
+                result = toVisitCollection.insertOne(doc);            
+                System.out.println("Inserted a document with the following id: " + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
+                break;
+     
         }
+    }
+    public void dropCollection(String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                pageCollection.drop();
+                break;
+            case "Word":
+                wordCollection.drop();
+                break;
+            case "History":
+                historyCollection.drop();
+                break;
+            case "Retrieved":
+                retrievedCollection.drop();
+                break;
+            case "Visited":
+                visitedCollection.drop();
+                break;
+            case "ToVisit":
+                toVisitCollection.drop();
+                break;
+        }
+    }
+
+
+
+    // public String getFirstToVisit() {
+    //     /*
+    //      * TODO: Implement this function as following:
+    //      *  -Get the first URL from the ToVisit Collection.
+    //      *  -If it exists, remove it from the collection and return it.
+    //      *  -Else return null
+    //      */
+    //     return null;
+    // }
+
+    // public ArrayList<String> getVisitedPages(){
+    //     ArrayList<String> visited=new ArrayList<String>();
+    //     /*
+    //      * TODO: Implement this function as following:
+    //      *  -If there is any visited page return them.
+    //      *  -Else return null
+    //      */
+    //     return visited;
+    // }
+
+    public String getFirstToVisit() throws IOException {
+        Document firstToVisit = toVisitCollection.find().limit(1).first();
+        if (firstToVisit != null) {
+        toVisitCollection.deleteOne(firstToVisit);
+        return firstToVisit.getString("URL");
+    } else {
+        return null;
+    }
+    }
+
+    public ArrayList<String> getVisitedPages() {
+        ArrayList<String> visited = new ArrayList<>();
+        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL")).into(visited);
+        return visited.isEmpty() ? null : visited;
+    }
+
+    public int getVisitedCount() {
+        return (int)visitedCollection.countDocuments();
+    }
+
+    public int getToVisitCount() {
+        return (int)toVisitCollection.countDocuments();
     }
 
     public void closeConnection() {
