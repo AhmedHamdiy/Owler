@@ -1,5 +1,6 @@
 package com.mycompany.app;
 import java.util.HashSet;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -17,7 +18,7 @@ public class CrawlerMain {
     
     public static void main(String[] args) {
 
-        System.out.println("Enter the Number of your owls : ");
+        System.out.print("Enter the Number of your owls : ");
         int ThreadNum = 0;
 
         while (ThreadNum < 1)

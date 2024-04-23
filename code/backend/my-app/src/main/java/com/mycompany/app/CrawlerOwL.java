@@ -128,7 +128,7 @@ public class CrawlerOwL implements Runnable {
                 String title = doc.title();
                 insertVisited(url);
                 mongodb.insertOne(new org.bson.Document("Link",url).append("Title", title)
-                                .append("HTML", HTMLPage).append("isIndexed",false), "Pages");
+                                .append("HTML", HTMLPage).append("isIndexed",false), "Page");
                 return doc;
             }
             else
