@@ -13,8 +13,7 @@ import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
 
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Set;
 
 import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
@@ -35,6 +34,7 @@ import com.mongodb.MongoException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 
 
 public class MongoDB {
@@ -126,8 +126,8 @@ public class MongoDB {
     }
     }
 
-    public BlockingQueue<String> getVisitedPages() {
-        BlockingQueue<String> visited = new LinkedBlockingQueue<String>();
+    public Set<String> getVisitedPages() {
+        Set<String> visited = new HashSet<String>();
         toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL")).into(visited);
         return visited.isEmpty() ? null : visited;
     }
@@ -143,6 +143,15 @@ public class MongoDB {
     public void closeConnection() {
         mongoClient.close();
         System.out.println("The Connection is closed");
+    }
+
+
+    public int checkVisitedThreshold() {
+        return (int)visitedCollection.countDocuments();
+    }
+
+    public int checkTotalThreshold() {
+        return (int)toVisitCollection.countDocuments()+(int)visitedCollection.countDocuments();
     }
 }
 

@@ -1,4 +1,6 @@
 package com.mycompany.app;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,79 +14,68 @@ import org.bson.Document;
 
 public class CrawlerMain {
     static MongoDB mongdb = new MongoDB();
-    public  static BlockingQueue<String> visitedPages;
-    public static BlockingQueue<String> CompactStrings = new LinkedBlockingQueue<>(); 
-    public static final int MAX_NUMBER_PAGES=6000;
+    public  static Set<String> visitedPages;
+    public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
     public static final String SEED_FILE = "code/backend/my-app/src/seed.txt";
-
+    
     public static void main(String[] args) {
 
-        System.out.println("Enter the Number of Threads : ");
+        System.out.println("Enter the Number of your owls : ");
         int ThreadNum = 0;
 
         while (ThreadNum < 1)
             try {
                 ThreadNum = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
             } catch (Exception e) {
-                System.out.println("Please Enter a Number");
+                System.out.println("Enter a valid number.");
                 ThreadNum = 0;
             }
 
         mongdb.initializeDatabaseConnection();
-        //Get the remaining pages count 
-        visitedPages=mongdb.getVisitedPages();
-        
-        int remainingCount=MAX_NUMBER_PAGES;
-        if(visitedPages!=null)
-            remainingCount-=visitedPages.size();
-        
-        if(remainingCount==MAX_NUMBER_PAGES)
-            visitedPages=fetchSeed();
 
-    
-        //Initialize the crawlerSpider8
+        //fetch the visited pages from the database to continue the crawling process (if it was interrupted)
+        visitedPages=mongdb.getVisitedPages();
+
+        if(visitedPages==null) //The crawling process is starting from scratch
+            visitedPages=fetchSeed();//Add the seeds to the pending pages
+        
+        //Feeding our owls to start the crawling process
         Thread[] threads = new Thread[ThreadNum];
         for (int i = 0; i < ThreadNum; i++) {
     
-            threads[i] = new Thread(new CrawlerOwL(visitedPages));
-            threads[i].setName("CrawlerSpider ("+Integer.toString(i)+")");
+            threads[i] = new Thread(new CrawlerOwL(visitedPages,pendingPages));
+            threads[i].setName("Owl ("+Integer.toString(i)+")");
         }
 
-        long startTime = System.currentTimeMillis();
         //Start the crawling process
         for (int i = 0; i < ThreadNum; i++)
             threads[i].start();
+        
+        //Wait for all owls to finish the crawling process
         for (int i = 0; i < ThreadNum; i++)
-            try {
-                
-                threads[i].join(); //Wait for all crawlspiders to finish their work
-                System.out.println("The owler ["+i+"] has joint.\n");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        long finishTime = System.currentTimeMillis();
-        System.out.println("Time taken to crawl "+ remainingCount+" pages :" + (finishTime - startTime) + "ms");
-    }
-    private static BlockingQueue<String> fetchSeed(){
-        try{
-            
-            BlockingQueue<String> seeds = new LinkedBlockingQueue<String>();
-            try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
-                String URL;
-                while ((URL=br.readLine())!=null) {
-                    System.out.println("Seed URL: " + URL); //Test
-                    seeds.add(URL);
-                    mongdb.insertOne(new Document("URL", URL), "ToVisit");
-                }
-                return seeds;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }catch(Exception e){
+        try {
+            threads[i].join(); 
+            System.out.println("The owler ["+i+"] has joint.\n");
+        } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+        mongdb.closeConnection();
+    }
+    private static Set<String> fetchSeed(){
+        Set<String> seeds = new HashSet<String>();
+        try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
+            String URL;
+            while ((URL=br.readLine())!=null) {
+                System.out.println("Seed URL: " + URL); //Test
+                seeds.add(URL);
+                mongdb.insertOne(new Document("URL", URL), "ToVisit");
+            }
+            return seeds;
+        } catch (IOException e) {
+            System.err.println("Error: Error in reading the seed file.");
             return null;
         }
     }
+    
+    
 }
