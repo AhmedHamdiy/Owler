@@ -28,6 +28,7 @@ import org.bson.conversions.Bson;
 // import org.bson.types.ObjectId;
 // import org.springframework.data.mongodb.core.query.Criteria;
 // import org.springframework.data.mongodb.core.query.Update;
+import org.bson.types.ObjectId;
 
 // import java.io.*;
 
@@ -155,29 +156,32 @@ public class MongoDB {
                 break;
         }
     }
+
     public String getFirstToVisit() throws IOException {
         Document firstToVisit = toVisitCollection.find().limit(1).first();
         if (firstToVisit != null) {
-        toVisitCollection.deleteOne(firstToVisit);
-        return firstToVisit.getString("URL");
-    } else {
-        return null;
-    }
+            toVisitCollection.deleteOne(firstToVisit);
+            return firstToVisit.getString("URL");
+        } else {
+            return null;
+        }
     }
 
     public Set<String> getVisitedPages() {
         Set<String> visited = new HashSet<String>();
-        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL")).into(visited);
+        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
+                .into(visited);
         return visited.isEmpty() ? null : visited;
     }
-    
+
     public int checkVisitedThreshold() {
-        return (int)visitedCollection.countDocuments();
+        return (int) visitedCollection.countDocuments();
     }
 
     public int checkTotalThreshold() {
-        return (int)toVisitCollection.countDocuments()+(int)visitedCollection.countDocuments();
+        return (int) toVisitCollection.countDocuments() + (int) visitedCollection.countDocuments();
     }
+
     public void insetMany(List<Document> ls, String collectionName) {
 
         InsertManyResult resultmany;
@@ -349,4 +353,10 @@ public class MongoDB {
 
     }
 
+    public void isIndexed(ObjectId id) { // make the page index true
+
+        Bson updates = Updates.combine(Updates.set("isIndexed", true));
+        pageCollection.updateOne(eq("_id", id), updates);
+
+    }
 }

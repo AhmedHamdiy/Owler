@@ -36,10 +36,10 @@ public class CrawlerOwL implements Runnable {
             try {
                 org.jsoup.nodes.Document doc = visitPage(nextURL);
                 if (doc != null) {
-                    Elements elements = doc.select("a[href]"); //select all <a> tags that has the href attribute 
+                    Elements elements = doc.select("a[href]"); //select all <a> tags that has the href attribute
                     for (Element tag : elements) {
                         String url = tag.attr("href"); //get the value of href attribute (URL)
-                        url = normalizeURL(url, nextURL); 
+                        url = normalizeURL(url, nextURL);
                         try {
                             if (url != null) {
                                 insertPending(url);
@@ -93,7 +93,7 @@ public class CrawlerOwL implements Runnable {
                 }
                 return nextURL;
             } catch (Exception e) {
-                
+
                 System.err.print("Error: error in getting the next page..");
                 return null; //An error has occured
             }
@@ -117,7 +117,7 @@ public class CrawlerOwL implements Runnable {
 
     private org.jsoup.nodes.Document visitPage(String url) {
         try {
-            if(!isSafe(url)) 
+            if(!isSafe(url))
                 return null;
             Connection myConnection = Jsoup.connect(url);
             myConnection.userAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36");
@@ -138,14 +138,14 @@ public class CrawlerOwL implements Runnable {
             return null;
         }
     }
-    
+
     private String normalizeURL(String newURL, String source) {
         try {
             URL url = new URL(source);
             if (newURL.startsWith("./")) {
                 newURL = newURL.substring(2);
                 newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
-            } 
+            }
             else if (newURL.startsWith("javascript:")) //Checks for java pages
                 newURL = null;
             else if (newURL.indexOf('?') != -1) //ignore queries
@@ -180,18 +180,18 @@ public class CrawlerOwL implements Runnable {
 
             try {
                 URL robotsTextFile = new URL(myURL.getProtocol() + "://" + myURL.getHost() + "/robots.txt");
-                
+
                 String line;
                 BufferedReader br = new BufferedReader(new InputStreamReader(robotsTextFile.openStream()));
-            
+
                 while ((line = br.readLine()) != null) {
                     line = line.trim();
                     Boolean userAgentStatus = line.startsWith("User-agent:") && line.contains("*");
-            
+
                     if (userAgentStatus && line.startsWith("Disallow:")) {
                         String blockedPath = line.substring(10).trim();
                         String blockedURL = myURL.getProtocol() + "://" + myURL.getHost() + blockedPath;
-            
+
                         robotLinks.add(blockedURL);
                     }
                 }
