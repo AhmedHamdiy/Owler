@@ -89,9 +89,9 @@ public class Indexer {
         List<Document> PageDocument = mongo.getCrawllerPages();
 
         // for (Document d : PageDocument) {
-        //     Object ID = d.get("_id");
-        //     ObjectId id = (ObjectId) ID;
-        //     mongo.isIndexed(id);
+        // Object ID = d.get("_id");
+        // ObjectId id = (ObjectId) ID;
+        // mongo.isIndexed(id);
 
         // }
         List<Thread> arrThread = new ArrayList<>();
@@ -100,18 +100,18 @@ public class Indexer {
         // t.start();
         // t.join();
         for (int i = 0; i < PageDocument.size(); i = i + Quantim) {
-        Thread t = new index(numThread, Quantim, PageDocument);
-        numThread++;
-        t.setName("Indexer Spider " + numThread);
-        t.start();
-        arrThread.add(t);
+            Thread t = new index(numThread, Quantim, PageDocument);
+            numThread++;
+            t.setName("Indexer Spider " + numThread);
+            t.start();
+            arrThread.add(t);
 
         }
         // new index(0, URLS.length, URLS).start();
 
         for (Thread tt : arrThread) {
-        tt.join();
-        System.out.println("the Thread " + tt.getName() + " is killed");
+            tt.join();
+            System.out.println("the Thread " + tt.getName() + " is killed");
         }
 
         List<Document> WordDocument = mongo.getWords();
@@ -122,16 +122,16 @@ public class Indexer {
         // te.join();
 
         for (int i = 0; i < WordDocument.size(); i = i + 1000) {
-        Thread t = new UpdateIDF(numThread, 1000, WordDocument);
-        numThread++;
-        t.setName("Indexer Spider IDF " + numThread);
-        t.start();
-        arrThreads.add(t);
+            Thread t = new UpdateIDF(numThread, 1000, WordDocument);
+            numThread++;
+            t.setName("Indexer Spider IDF " + numThread);
+            t.start();
+            arrThreads.add(t);
 
         }
         for (Thread tt : arrThreads) {
-        tt.join();
-        System.out.println("the Thread IDF " + tt.getName() + " is killed");
+            tt.join();
+            System.out.println("the Thread IDF " + tt.getName() + " is killed");
         }
 
         mongo.closeConnection();
@@ -176,11 +176,9 @@ public class Indexer {
         public void run() {
 
             for (int i = num * quntum; i < pagesDocument.size() && i < ((num + 1) * quntum); i++) {
+
                 String htmlString = (String) pagesDocument.get(i).get("HTML");
                 org.jsoup.nodes.Document document = Jsoup.parse(htmlString);
-                // org.jsoup.nodes.Document document = getreq(pagesDocument.get(i));
-                // Object obj = pagesDocument.get(i).get("HTML");
-                // org.jsoup.nodes.Document document = (org.jsoup.nodes.Document) obj;
 
                 /// ============= if the page is indexed ignor it =============///
 
@@ -278,30 +276,14 @@ public class Indexer {
                             iterable.add(newPage);
                             // set the new list of pages
                             mongo.updatePagesList((String) word.getKey(), iterable);
-                            // }
 
                         }
                     }
 
-                    System.err.println();
-                    System.err.println();
-                    System.err.println("DONE");
-                    System.err.println();
                 }
 
                 mongo.isIndexed(id);
             }
-            // }
-            System.err.println();
-            System.err.println();
-            System.err.println("I am here now so i can updata IDF");
-
-            // IDFupdate();
-            System.err.println();
-            System.err.println();
-            System.err.println("DONE  all");
-            System.err.println();
-            // mongo.closeConnection();
 
         }
 
