@@ -1,4 +1,5 @@
 package com.mycompany.app;
+
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -16,13 +17,15 @@ import java.util.*;
 public class CrawlerOwL implements Runnable {
     private static final int MAX_NUMBER_PAGES = 10000;
     static MongoDB mongodb = new MongoDB();
-    //We use HashMap to store the blocked URLs for every website by reading robot.txt.
+    // We use HashMap to store the blocked URLs for every website by reading
+    // robot.txt.
     public static HashMap<String, Set<String>> blocked = new HashMap<String, Set<String>>();
-    //We use HashSet to store the visited pages to ensure that we don't visit the same page twice.
+    // We use HashSet to store the visited pages to ensure that we don't visit the
+    // same page twice.
     private Set<String> visitedPages = new HashSet<String>();
-    //We use LinkedBlockingQueue to ensure multithreading safety when we deal with the pages we want to visit.
+    // We use LinkedBlockingQueue to ensure multithreading safety when we deal with
+    // the pages we want to visit.
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<String>();
-
 
     public CrawlerOwL(Set<String> visited, BlockingQueue<String> pendings) {
         visitedPages = visited;
@@ -45,16 +48,16 @@ public class CrawlerOwL implements Runnable {
                                 insertPending(url);
                             }
                         } catch (Exception e) {
-                            System.err.println("Error: error in adding to pending pages..");
+                            System.err.println("Error in adding to pending pages..");
                         }
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Error: error in normalizing the link ..");
+                System.err.println("Error in normalizing link..");
             }
         }
         mongodb.closeConnection();
-        System.out.println("The "+Thread.currentThread().getName() + " has finished crawling\n");
+        System.out.println("The " + Thread.currentThread().getName() + " has finished crawling\n");
     }
 
     public void insertPending(String url) {
@@ -74,7 +77,7 @@ public class CrawlerOwL implements Runnable {
     public void insertVisited(String url) {
         synchronized (mongodb) {
             try {
-                mongodb.insertOne(new org.bson.Document("URL",url),"Visited");
+                mongodb.insertOne(new org.bson.Document("URL", url), "Visited");
                 visitedPages.add(url);
             } catch (Exception e) {
                 System.err.println("Error: error in inserting the visited page..");
@@ -86,7 +89,7 @@ public class CrawlerOwL implements Runnable {
     public String getNextPage() {
         synchronized (mongodb) {
             try {
-                String nextURL= mongodb.getFirstToVisit();
+                String nextURL = mongodb.getFirstToVisit();
                 if (nextURL == null) {
                     //No pages to crawl at this time(waits for any other thread to produce urls to crawl)
                     System.out.println("The "+Thread.currentThread().getName() + " will sleep beacuse it has no pages to crawl\n");
@@ -94,34 +97,35 @@ public class CrawlerOwL implements Runnable {
                 }
                 return nextURL;
             } catch (Exception e) {
-                
+
                 System.err.print("Error: error in getting the next page..");
-                return null; //An error has occured
+                return null; // An error has occured
             }
         }
     }
 
     public boolean continueCrawling() {
-        if(visitedPages==null)
+        if (visitedPages == null)
             return true;
         else
-        synchronized (mongodb) {
-            return mongodb.checkVisitedThreshold()<= MAX_NUMBER_PAGES;
-        }
+            synchronized (mongodb) {
+                return mongodb.checkVisitedThreshold() <= MAX_NUMBER_PAGES;
+            }
     }
 
     public boolean canInsert() {
         synchronized (mongodb) {
-            return mongodb.checkTotalThreshold()<= MAX_NUMBER_PAGES;
+            return mongodb.checkTotalThreshold() <= MAX_NUMBER_PAGES;
         }
     }
 
     private org.jsoup.nodes.Document visitPage(String url) {
         try {
-            if(!isSafe(url)) 
+            if (!isSafe(url))
                 return null;
             Connection myConnection = Jsoup.connect(url);
-            myConnection.userAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36");
+            myConnection.userAgent(
+                    "Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36");
             myConnection.referrer("http://www.google.com");
             org.jsoup.nodes.Document doc = myConnection.get();
             if (myConnection.response().statusCode() == 200) {                    //Check if the URL is allowed to be crawled
@@ -142,11 +146,10 @@ public class CrawlerOwL implements Runnable {
                 mongodb.insertOne(new org.bson.Document("Link",url).append("Title", title).append("LogoURL",iconUrl)
                                 .append("HTML", HTMLPage).append("isIndexed",false), "Page");
                 return doc;
-            }
-            else
+            } else
                 return null;
         } catch (IOException e) {
-            System.err.println("Error: error in visiting the page..");
+            System.err.println("Error: error in visiting page..");
             return null;
         }
     }
@@ -241,9 +244,9 @@ public class CrawlerOwL implements Runnable {
             blockedLinks= robotLinks;
         }
 
-        if (blockedLinks == null) {
-            return false;
-        }
+            if (blockedLinks == null) {
+                return false;
+            }
 
         for (String blockedLink : blockedLinks) {
             if (url.toString().startsWith(blockedLink)) { //If the url is in the blocked URLs block it
