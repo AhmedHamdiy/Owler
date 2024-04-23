@@ -1,22 +1,22 @@
 package com.mycompany.app;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.bson.Document;
 
 public class CrawlerMain {
     static MongoDB mongdb = new MongoDB();
-    public  static ArrayList<String> visitedPages;
+    public  static BlockingQueue<String> visitedPages;
+    public static BlockingQueue<String> CompactStrings = new LinkedBlockingQueue<>(); 
     public static final int MAX_NUMBER_PAGES=6000;
-    public static final int SEED_URLS_COUNT=10;
+    public static final String SEED_FILE = "code/backend/my-app/src/seed.txt";
+
     public static void main(String[] args) {
 
         System.out.println("Enter the Number of Threads : ");
@@ -46,7 +46,7 @@ public class CrawlerMain {
         Thread[] threads = new Thread[ThreadNum];
         for (int i = 0; i < ThreadNum; i++) {
     
-            threads[i] = new Thread(new CrawlerOwL(visitedPages,remainingCount));
+            threads[i] = new Thread(new CrawlerOwL(visitedPages));
             threads[i].setName("CrawlerSpider ("+Integer.toString(i)+")");
         }
 
@@ -66,12 +66,11 @@ public class CrawlerMain {
         long finishTime = System.currentTimeMillis();
         System.out.println("Time taken to crawl "+ remainingCount+" pages :" + (finishTime - startTime) + "ms");
     }
-    private static ArrayList<String> fetchSeed(){
+    private static BlockingQueue<String> fetchSeed(){
         try{
-            String seedFile= ("/media/ahmed/Programming/Programming/Projects/web/APT/Crowler/code/backend/my-app/src/main/java/com/mycompany/app/seed.txt");
             
-            ArrayList<String> seeds = new ArrayList<String>();
-            try (BufferedReader br = new BufferedReader(new FileReader(seedFile))) {
+            BlockingQueue<String> seeds = new LinkedBlockingQueue<String>();
+            try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
                 String URL;
                 while ((URL=br.readLine())!=null) {
                     System.out.println("Seed URL: " + URL); //Test

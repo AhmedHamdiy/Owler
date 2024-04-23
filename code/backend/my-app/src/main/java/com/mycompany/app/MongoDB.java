@@ -13,6 +13,8 @@ import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
 
 import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
@@ -114,27 +116,6 @@ public class MongoDB {
     }
 
 
-
-    // public String getFirstToVisit() {
-    //     /*
-    //      * TODO: Implement this function as following:
-    //      *  -Get the first URL from the ToVisit Collection.
-    //      *  -If it exists, remove it from the collection and return it.
-    //      *  -Else return null
-    //      */
-    //     return null;
-    // }
-
-    // public ArrayList<String> getVisitedPages(){
-    //     ArrayList<String> visited=new ArrayList<String>();
-    //     /*
-    //      * TODO: Implement this function as following:
-    //      *  -If there is any visited page return them.
-    //      *  -Else return null
-    //      */
-    //     return visited;
-    // }
-
     public String getFirstToVisit() throws IOException {
         Document firstToVisit = toVisitCollection.find().limit(1).first();
         if (firstToVisit != null) {
@@ -145,8 +126,8 @@ public class MongoDB {
     }
     }
 
-    public ArrayList<String> getVisitedPages() {
-        ArrayList<String> visited = new ArrayList<>();
+    public BlockingQueue<String> getVisitedPages() {
+        BlockingQueue<String> visited = new LinkedBlockingQueue<String>();
         toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL")).into(visited);
         return visited.isEmpty() ? null : visited;
     }

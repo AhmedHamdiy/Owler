@@ -1,56 +1,38 @@
 package com.mycompany.app;
-import com.mongodb.client.FindIterable;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
-// import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import java.io.FileWriter;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import org.bson.Document;
 
 import org.jsoup.select.Elements;
-import com.mongodb.internal.connection.Time;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.*;
-import com.mongodb.internal.connection.Time;
 
 public class CrawlerOwL implements Runnable {
     private static final int MAX_NUMBER_PAGES = 6000;
-    private static int pendingPagesCount;
     public static HashMap<String, Set<String>> blocked = new HashMap<String, Set<String>>();
-    public static ArrayList<String> visitedPages = new ArrayList<String>();
+    public static BlockingQueue<String> visitedPages = new LinkedBlockingQueue<String>();
     static MongoDB mongoDB = new MongoDB();
-    public static Robot myRobot=new Robot(blocked); 
     //We use LinkedBlockingQueue to ensure multithreading safety when we deal with the pages we want to visit.
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<String>();
 
 
-    public CrawlerOwL(ArrayList<String> visited, int remainingCount) {
+    public CrawlerOwL(BlockingQueue<String>  visited) {
         visitedPages = visited;
-        pendingPagesCount=remainingCount;
         mongoDB.initializeDatabaseConnection();
     }
 
     public void insertPendingPage(String url) {
         synchronized (mongoDB) {
-            if (!(pendingPages.contains(url) || visitedPages.contains(url) || pendingPages.size()>6000)) {
+            if (!(pendingPages.contains(url) || visitedPages.contains(url))) {
                 try {
                     mongoDB.insertOne(new org.bson.Document("URL",url),"ToVisit");
                     pendingPages.add(url);
-                    pendingPagesCount--;
                     mongoDB.notifyAll();//if there was a thread waiting for a page to crawl
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -111,18 +93,17 @@ public class CrawlerOwL implements Runnable {
     }
 
     public void run() {
-        while (pendingPagesCount>0) {
-        System.out.println("we need to crawl "+pendingPagesCount + " pages\n");
+        while (visitedPages==null||visitedPages.size()<=MAX_NUMBER_PAGES) {
             String nextURL = getNextPendingPage();
             try {
-                org.jsoup.nodes.Document doc = downloadPage(nextURL);
+                org.jsoup.nodes.Document doc = visitPage(nextURL);
                 if (doc != null) {
                     Elements elements = doc.select("a[href]"); //select all <a> tags that has the href attribute 
                     for (Element tag : elements) {
                         String url = tag.attr("href"); //get the value of href attribute (URL)
                         url = normalizeURL(url, nextURL); 
                         try {
-                            if (url != null && !isPending(url) &&  !isVisited(url)&& pendingPages.size()>6000) {
+                            if (url != null) {
                                 insertPendingPage(url);
                             }
                         } catch (Exception e) {
@@ -132,39 +113,34 @@ public class CrawlerOwL implements Runnable {
                 }
             } catch (Exception e) {
                 System.out.println("Error: error in normalizing the link..");
-
-            }
-            synchronized(mongoDB){
-                pendingPagesCount=MAX_NUMBER_PAGES-getVisitedPagesCount();
             }
         }
+        
         System.out.println("The "+Thread.currentThread().getName() + " has finished crawling\n");
-
     }
 
-    private org.jsoup.nodes.Document downloadPage(String url) {
+    private org.jsoup.nodes.Document visitPage(String url) {
         try {
-            if(!myRobot.isSafe(url)) 
+            if(!isSafe(url)) 
                 return null;
             Connection myConnection = Jsoup.connect(url);
             myConnection.userAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36");
             myConnection.referrer("http://www.google.com");
             org.jsoup.nodes.Document doc = myConnection.get();
             if (myConnection.response().statusCode() == 200) {
-                
                 String HTMLPage = doc.toString();
                 String title = doc.title();
+                insertVisitedPage(url);
                 mongoDB.insertOne(new org.bson.Document("Link",url).append("Title", title)
-                                .append("HTML", HTMLPage), "Pages");
-                    insertVisitedPage(url);
-                    return doc;
-                }
+                                .append("HTML", HTMLPage).append("isIndexed",false), "Pages");
+                return doc;
+            }
+            else
                 return null;
         } catch (IOException e) {
             return null;
         }
     }
-
     
     private String normalizeURL(String newURL, String source) {
         try {
@@ -192,6 +168,63 @@ public class CrawlerOwL implements Runnable {
             return new URL(url.getProtocol(), url.getHost(), "/");
         }
         return url;
+    }
+
+    public Boolean isSafe(String url) {
+        try {
+            URL myURL = new URL(url);
+            Set<String> blockedLinks = null;
+
+        if (blocked.containsKey(myURL.toString())) {
+            System.out.println(myURL.toString() + " is already in the allDisallowedLinks HashMap.");
+            blockedLinks= blocked.get(myURL.toString());
+        }
+        else{
+            Set<String> robotLinks = new HashSet<>();
+
+            try {
+                URL robotsTxtUrl = new URL(myURL.getProtocol() + "://" + myURL.getHost() + "/robots.txt");
+                
+                String line;
+                BufferedReader br = new BufferedReader(new InputStreamReader(robotsTxtUrl.openStream()));
+            
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    Boolean userAgentStatus = line.startsWith("User-agent:") && line.contains("*");
+            
+                    if (userAgentStatus && line.startsWith("Disallow:")) {
+                        String blockedPath = line.substring(10).trim();
+                        String blockedURL = myURL.getProtocol() + "://" + myURL.getHost() + blockedPath;
+            
+                        robotLinks.add(blockedURL);
+                    }
+                }
+                br.close();
+            } catch (MalformedURLException e) {
+                System.err.println(robotLinks);
+                return false;
+            } catch (IOException e) {
+                System.out.println("Error occurred while reading robots.txt for URL: " + myURL.toString());
+                return false;
+            }
+            blocked.put(myURL.toString(), robotLinks);
+            blockedLinks= robotLinks;
+        }
+
+        if (blockedLinks == null) {
+            return false;
+        }
+
+        for (String blockedLink : blockedLinks) {
+            if (url.toString().startsWith(blockedLink)) {
+                return false;
+            }
+        }
+        return true;
+        } catch (MalformedURLException e) {
+            System.err.println();
+            return false;
+        }
     }
 
 }
