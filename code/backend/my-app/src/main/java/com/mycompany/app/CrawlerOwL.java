@@ -138,32 +138,54 @@ public class CrawlerOwL implements Runnable {
             return null;
         }
     }
-    
-    private String normalizeURL(String newURL, String source) {
+    public static String normalizeURL(String newURL, String source) {
         try {
             URL url = new URL(source);
+
             if (newURL.startsWith("./")) {
                 newURL = newURL.substring(2);
                 newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
-            } 
-            else if (newURL.startsWith("javascript:")) //Checks for java pages
-                newURL = null;
-            else if (newURL.indexOf('?') != -1) //ignore queries
-                newURL = newURL.substring(0, newURL.indexOf('?'));
-            return newURL;
-        } catch (Exception e) {
-            System.err.println("Error: error in normalizing the link: "+newURL+" ..");
+            } else if (newURL.startsWith("javascript:")) {
+                newURL = null; // Ignore JavaScript links
+            } else if (newURL.indexOf('?') != -1) {
+                newURL = newURL.substring(0, newURL.indexOf('?')); // Ignore query parameters
+            }
+
+            return normalizeURL(newURL); // Normalize the URL
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
             return null;
         }
-
     }
 
-    private static URL normalizePath(URL url) throws MalformedURLException {
-        String path = url.getPath();
-        if (path == null || path.length()==0) {
-            return new URL(url.getProtocol(), url.getHost(), "/");
+    private static String normalizeURL(String url) {
+        try {
+            URL parsedURL = new URL(url.trim());
+            //Remove www subdomain if exists (normalize the domain name)
+            String domain = parsedURL.getHost().startsWith("www.") ? parsedURL.getHost().substring(4) : parsedURL.getHost();
+
+            //Remove ending slash if exists (normalize the path)
+            String path = parsedURL.getPath().endsWith("/") ? parsedURL.getPath().substring(0, parsedURL.getPath().length() - 1) : parsedURL.getPath();
+
+            //Reconstruct the normalized URL
+            return parsedURL.getProtocol() + "://" + domain + path;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return null;
         }
-        return url;
+    }
+
+    private static String normalizePath(URL url) {
+        String path = url.getPath();
+        if (path.endsWith("/")) {
+            return path;
+        } else {
+            int index = path.lastIndexOf('/');
+            if (index != -1) {
+                return path.substring(0, index + 1);
+            }
+            return "/";
+        }
     }
 
     public Boolean isSafe(String url) {
