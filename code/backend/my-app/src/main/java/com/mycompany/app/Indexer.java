@@ -1,7 +1,16 @@
-package com.mycompany.app;
+// Author :Mariam Amin
+/*
+ * Indexer calss :
+ * 1- retrive all the pages in data base
+ * 2- Multithread as the user enter the number of page the thread will index
+ * 3- start the threads to filter all pages and store it into map of <String ,Lsit>
+ * 4- wait until all thread finish thier job and join at the end
+ * 5- multithread to set the data like IDF and rank each thread with  be responsible for 500 word
+ * 6- join threads
+ * 7- deal with data base and insert all the list by InsertMany
+ */
 
-import org.jsoup.Jsoup;
-// import org.jsoup.nodes.Document;
+package com.mycompany.app;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -12,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.bson.Document;
-import org.bson.types.ObjectId;
-
-// import edu.stanford.nlp.io.EncodingPrintWriter.out;
 
 public class Indexer {
     public static Map<String, List<Document>> WordDoecArr;
@@ -32,7 +38,7 @@ public class Indexer {
         WordDoecArr = new HashMap<>();
         ReadyWords = new ArrayList<>();
         WordList = new ArrayList<>();
-
+        // git number of page for thread//
         long startTime = System.currentTimeMillis();
 
         System.out.println("Enter Number of page per thread : ");
@@ -45,6 +51,7 @@ public class Indexer {
                 Quantim = 0;
             }
 
+        // =====retrive the pages =====//
         List<Document> PageDocument = mongo.getCrawllerPages();
 
         // for (Document d : PageDocument) {

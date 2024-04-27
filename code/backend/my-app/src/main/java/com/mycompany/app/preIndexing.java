@@ -1,3 +1,18 @@
+// AUTHOR : Mariam Amin
+
+/*this calss for filtering page of words
+check if the page not indexed befor :
+
+ * 1- handling all numbers
+ * 2- handling the unuseful words in some tages
+ * 3- handling special characters
+ * 4- remove stop words
+ * 5- store one word for all its prefix
+ * 6- store data in map of Stirng->(word) List->(Documet that have that word)
+ * 7- flage the page thet it has been indexed
+ *
+ */
+
 package com.mycompany.app;
 
 import java.io.IOException;
@@ -59,7 +74,7 @@ public class preIndexing extends Thread {
                     if (isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) {
                         continue;
                     }
-                    int tagenum=Switchtages(tagname);
+                    int tagenum = Switchtages(tagname);
 
                     Pair<String, Integer> pairName = new Pair<>(word, tagenum);
                     wordPair.add(pairName);
@@ -71,15 +86,27 @@ public class preIndexing extends Thread {
 
     }
 
-    private static Integer Switchtages(String tagName)
-    {
-        if (tagName=="h1"||tagName=="h2"||tagName=="h3"||tagName=="h4"||tagName=="h5"||tagName=="h6")
-        {
+    private static Integer Switchtages(String tagName) {
+        if (tagName == "h1")
             return 1;
-        }
-        else if(tagName=="p"||tagName=="span")
-        return 2;
-        else return 3;
+        else if (tagName == "h2")
+            return 2;
+
+        else if (tagName == "h3")
+            return 3;
+        else if (tagName == "h4")
+            return 4;
+
+        else if (tagName == "h5")
+            return 5;
+
+        else if (tagName == "h6")
+            return 6;
+
+        else if (tagName == "p" || tagName == "span")
+            return 7;
+        else
+            return 8;
 
     }
 
@@ -141,7 +168,7 @@ public class preIndexing extends Thread {
                     frequency++;
 
                     int tagnum = wordFreq.get(word.getKey()).getValue();
-                    if (tagnum < word.getValue())
+                    if (tagnum > word.getValue())
                         tagnum = word.getValue();
 
                     wordFreq.put(word.getKey(), new Pair<Integer, Integer>(frequency, tagnum));
@@ -186,9 +213,10 @@ public class preIndexing extends Thread {
 
                     }
                 }
-
             }
-            mongoDB.isIndexed(id);
+            synchronized (mongoDB) {
+                mongoDB.isIndexed(id);
+            }
         }
     }
 }
