@@ -51,8 +51,15 @@ public class Indexer {
                 Quantim = 0;
             }
 
-        // =====retrive the pages =====//
-        List<Document> PageDocument = mongo.getCrawllerPages();
+        // =====retrive the pages that has not been indexed =====//
+        List<Document> PageDocument = mongo.getnonIndexedPages();
+        if (PageDocument.isEmpty()) {
+            mongo.closeConnection();
+            long finishTime = System
+                    .currentTimeMillis();
+            System.out.println("Time taken to indexer :" + (finishTime - startTime) + "ms");
+            return;
+        }
 
         // for (Document d : PageDocument) {
         // Object ID = d.get("_id");
@@ -77,6 +84,30 @@ public class Indexer {
             tt.join();
             System.out.println("the Thread " + tt.getName() + " is killed");
         }
+
+        // ==== get all the words form data base and drop wordcollection
+        List<Document> words = mongo.getWords();
+        for (Document d : words) {
+            Object word_val = d.get("word");
+            String word_value = (String) word_val;
+            Object word_P = d.get("pages");
+            List<Document> Word_Pages = (List<Document>) word_P;
+
+            if (WordDoecArr.containsKey(word_val)) {
+                List<Document> pageList = Indexer.WordDoecArr.get(word_val);
+                pageList.addAll(Word_Pages);
+
+                WordDoecArr.put(word_value, pageList);
+
+                // =========if not exists so you do not need update this document===========//
+            } else {
+
+                WordDoecArr.put(word_value, (List<Document>) Word_Pages);
+
+            }
+        }
+        // ====drop word collection======//
+        mongo.dropCollection("Word");
 
         for (Map.Entry<String, List<Document>> entry : WordDoecArr.entrySet()) {
             WordList.add(entry.getKey());
@@ -103,6 +134,14 @@ public class Indexer {
         for (Thread tt : arrThreads) {
             tt.join();
             System.out.println("the Thread IDF " + tt.getName() + " is killed");
+        }
+        // ====if no word exists close connection======//
+        if (ReadyWords.isEmpty()) {
+            mongo.closeConnection();
+            long finishTime = System
+                    .currentTimeMillis();
+            System.out.println("Time taken to indexer :" + (finishTime - startTime) + "ms");
+            return;
         }
 
         System.out.println(ReadyWords.size());
