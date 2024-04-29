@@ -326,6 +326,13 @@ public class MongoDB {
         pageCollection.updateOne(eq("_id", id), updates);
 
     }
+    public List<Document> getnonIndexedPages() {
+        FindIterable<Document> iterable = pageCollection.find(eq("isIndexed", false));
+        List<Document> result = new ArrayList<>();
+        iterable.into(result);
+        return result;
+
+    }
 
      Set<String> searchPhrase(String phrase) {
         String[] words = phrase.split("\\s+");
