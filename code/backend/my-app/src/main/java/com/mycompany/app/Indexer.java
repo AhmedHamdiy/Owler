@@ -52,7 +52,7 @@ public class Indexer {
             }
 
         // =====retrive the pages =====//
-        List<Document> PageDocument = mongo.getCrawllerPages();
+        List<Document> PageCollection = mongo.getCrawllerPages();
 
         // for (Document d : PageDocument) {
         // Object ID = d.get("_id");
@@ -64,8 +64,8 @@ public class Indexer {
         // Thread t = new index(0, PageDocument.size(), PageDocument);
         // t.start();
         // t.join();
-        for (int i = 0; i < PageDocument.size(); i = i + Quantim) {
-            Thread t = new preIndexing(numThread, Quantim, PageDocument, mongo);
+        for (int i = 0; i < PageCollection.size(); i = i + Quantim) {
+            Thread t = new preIndexing(numThread, Quantim, PageCollection, mongo);
             numThread++;
             t.setName("preIndexing Spider " + numThread);
             t.start();

@@ -18,6 +18,7 @@ public class Ranker {
         List <String>sortedLinks = sortLinks(result);
         System.out.println(sortedLinks);
     }
+    
     List<String> sortLinks(HashMap<String,Double> result )
     {
         List<Map.Entry<String, Double>> list = new ArrayList<>(result.entrySet());

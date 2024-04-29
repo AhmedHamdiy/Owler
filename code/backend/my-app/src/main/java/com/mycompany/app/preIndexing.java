@@ -34,17 +34,15 @@ public class preIndexing extends Thread {
 
     private int num;
     private int interval;
-    private List<Document> pagesDocument;
+    private List<Document> pagesCollection;
     private MongoDB mongoDB;
     static String suffixPattern = "(ly|ward|wise|ed|en|er|ing|ize|iseable|ible|al|ant|ary|fulious|ous|ive|less|eer|er|ion|ism|ity|ment|ness|or|sion|ship|th|ful)$";
 
     public preIndexing(int index, int i, List<Document> doc, MongoDB mongo) {
         num = index;
         interval = i;
-        pagesDocument = doc;
-
+        pagesCollection = doc;
         mongoDB = mongo;
-
     }
 
     static List<Pair<String, Integer>> filterword(Elements elements) {
@@ -133,14 +131,14 @@ public class preIndexing extends Thread {
 
     public void run() {
 
-        for (int i = num * interval; i < pagesDocument.size() && i < ((num + 1) * interval); i++) {
+        for (int i = num * interval; i < pagesCollection.size() && i < ((num + 1) * interval); i++) {
 
-            String htmlString = (String) pagesDocument.get(i).get("HTML");
+            String htmlString = (String) pagesCollection.get(i).get("HTML");
             org.jsoup.nodes.Document document = Jsoup.parse(htmlString);
 
             /// ============= if the page is indexed ignor it =============///
 
-            Object isIndexed = pagesDocument.get(i).get("isIndexed");
+            Object isIndexed = pagesCollection.get(i).get("isIndexed");
             boolean is_indexed = (boolean) isIndexed;
 
             if (is_indexed)
@@ -179,7 +177,7 @@ public class preIndexing extends Thread {
             }
 
             // =========get the page id ======================//
-            Object ID = pagesDocument.get(i).get("_id");
+            Object ID = pagesCollection.get(i).get("_id");
             ObjectId id = (ObjectId) ID;
 
             int freq; // ===>FREQUENCY OF THE WORD
