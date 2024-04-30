@@ -7,14 +7,10 @@ public class Graph {
     List<Node> nodes = new ArrayList<>();
 
     Node containsNode(String URL) {
-        //System.out.println("    Searching in my " + nodes.size() + " nodes");
         for (Node node : nodes) {
-            if (node.URL.equals(URL)) {
-                System.out.println("    Search: saying yes");
+            if (node.URL.equals(URL))
                 return node;
-            }
         }
-        System.out.println("    Search: saying no");
         return null;
     }
 
