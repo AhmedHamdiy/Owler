@@ -34,7 +34,7 @@ public class setIDF extends Thread {
             // num of pages that have that word
             double numOfPagePerWord = pages.size();
             // calculate the IDF
-            IDF = Math.log10(6000 / numOfPagePerWord);
+            IDF = Math.log10(10000 / numOfPagePerWord);
             /// loop over the pages
 
             for (Document page : pages) {

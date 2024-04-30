@@ -1,4 +1,6 @@
 package com.mycompany.app;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -11,6 +13,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.jsoup.select.Elements;
+
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+
 import java.util.*;
 
 public class CrawlerOwL implements Runnable {
@@ -127,8 +134,10 @@ public class CrawlerOwL implements Runnable {
                 String HTMLPage = doc.toString(); //Parsing the HTML page into a string
                 String title = doc.title();
                 insertVisited(url);
+
                 mongodb.insertOne(new org.bson.Document("Link",url).append("Title", title)
-                                .append("HTML", HTMLPage).append("isIndexed",false), "Page");
+                                .append("HTML", HTMLPage)
+                                .append("isIndexed",false), "Page");
                 return doc;
             }
             else
@@ -222,5 +231,13 @@ public class CrawlerOwL implements Runnable {
             return false;
         }
     }
+
+    /* public static void main(String[] args) {
+        String src = "https://www.britannica.com/animal/flightless-bird";
+        String next = "/History-Society";
+
+        String normalized = normalizeURL(next, src);
+        System.out.println(normalized);
+    } */
 
 }

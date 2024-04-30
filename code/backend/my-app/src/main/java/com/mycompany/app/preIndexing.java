@@ -89,23 +89,18 @@ public class preIndexing extends Thread {
             return 1;
         else if (tagName == "h2")
             return 2;
-
         else if (tagName == "h3")
             return 3;
         else if (tagName == "h4")
             return 4;
-
         else if (tagName == "h5")
             return 5;
-
         else if (tagName == "h6")
             return 6;
-
         else if (tagName == "p" || tagName == "span")
             return 7;
         else
             return 8;
-
     }
 
     private static boolean isStopWord(String word) {

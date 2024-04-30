@@ -27,7 +27,7 @@ public class Indexer {
     public static List<String> WordList;
     public static List<Document> ReadyWords;
     private static MongoDB mongo;
-    private static int Quantim = -1;
+    private static int Quantum = -1;
 
     public static void main(String[] args) throws Exception {
 
@@ -43,17 +43,18 @@ public class Indexer {
 
         System.out.println("Enter Number of page per thread : ");
 
-        while (Quantim < 1)
+        while (Quantum < 1)
             try {
-                Quantim = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
+                Quantum = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
             } catch (Exception e) {
                 System.out.println("Please Enter a Number");
-                Quantim = 0;
+                Quantum = 0;
             }
 
         // =====retrive the pages that has not been indexed =====//
-        List<Document> PageDocument = mongo.getnonIndexedPages();
-        if (PageDocument.isEmpty()) {
+        List<Document> pageCollection = mongo.getnonIndexedPages();
+
+        if (pageCollection.isEmpty()) {
             mongo.closeConnection();
             long finishTime = System
                     .currentTimeMillis();
@@ -71,8 +72,8 @@ public class Indexer {
         // Thread t = new index(0, PageDocument.size(), PageDocument);
         // t.start();
         // t.join();
-        for (int i = 0; i < PageCollection.size(); i = i + Quantim) {
-            Thread t = new preIndexing(numThread, Quantim, PageCollection, mongo);
+        for (int i = 0; i < pageCollection.size(); i = i + Quantum) {
+            Thread t = new preIndexing(numThread, Quantum, pageCollection, mongo);
             numThread++;
             t.setName("preIndexing Spider " + numThread);
             t.start();

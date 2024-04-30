@@ -119,7 +119,7 @@ public class MongoDB {
 
     public void PrintCollectionData(String colName) {
 
-        MongoCollection<Document> collections = database.getCollection("colName");
+        MongoCollection<Document> collections = database.getCollection(colName);
         try (MongoCursor<Document> cursor = collections.find()
                 .iterator()) {
             while (cursor.hasNext()) {
@@ -326,6 +326,7 @@ public class MongoDB {
         pageCollection.updateOne(eq("_id", id), updates);
 
     }
+
     public List<Document> getnonIndexedPages() {
         FindIterable<Document> iterable = pageCollection.find(eq("isIndexed", false));
         List<Document> result = new ArrayList<>();
@@ -334,7 +335,7 @@ public class MongoDB {
 
     }
 
-     Set<String> searchPhrase(String phrase) {
+    Set<String> searchPhrase(String phrase) {
         String[] words = phrase.split("\\s+");
         Set<String> commonLinks = new HashSet<>();
         List<String> returnedLinks = new ArrayList<>();
@@ -349,6 +350,11 @@ public class MongoDB {
         return commonLinks;
     }
 
+    /** returns a list of links to pages that contain a given word
+     * @param word your search term
+     * @return list of strings -> the URL of each page that contains a reference to said word 
+     */
+    // MIGHT NEED TO EDIT THIS TO COMPLY WITH CURRENT SCHEMA!
     List<String> getPages(String word) {
         List<String> pages = new ArrayList<>();
         FindIterable<Document> pageDocs;
@@ -357,25 +363,33 @@ public class MongoDB {
         pageDocs = wordCollection.find(filter).projection(projection);
 
         List<Document> linkDocs = (List<Document>) (pageDocs.first().get("Pages"));
+
         for (Document doc2 : linkDocs) {
             pages.add(doc2.get("Link", String.class));
         }
         return pages;
     }
 
+    /**
+     * Updates IDF for each word in word collection according to existing metrics (as IDF = total n of pages / DF)
+     */
     void updateIDF() {
         Bson projection = fields(include("Word", "No_pages"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
         int totalPages = 6000;
         while (cursor.hasNext()) {
             Document doc = cursor.next();
-            int No_pages = doc.getInteger("No_pages");
-            double idf = log(6000.0 / No_pages);
+            int docFrequency = doc.getInteger("No_pages");
+            double idf = log(10000.0 / docFrequency);
             Bson filter = Filters.eq("Word", doc.getString("Word"));
             wordCollection.updateOne(filter, set("IDF", idf));
         }
     }
 
+    /**
+     * Updates TF for each reference (in a particular page) for each word in the word collection,
+     * based on existing metrics (as TF = times mentioned in page 'frequency' / total n of words in page).
+     */
     void updateTF() {
         Bson projection = fields(include("Word", "Pages"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
@@ -395,6 +409,9 @@ public class MongoDB {
 
     }
 
+    /**
+     * Updates rank (TF-IDF) for each reference (in a particular page) of each word based on existing TF & IDF metrics.
+     */
     void updateRank() {
         Bson projection = fields(include("Word", "IDF", "Pages.Doc_Id", "Pages.TF", "Pages.Rank"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
