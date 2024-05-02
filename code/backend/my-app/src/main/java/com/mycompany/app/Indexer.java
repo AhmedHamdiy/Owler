@@ -23,25 +23,25 @@ import java.util.Map;
 import org.bson.Document;
 
 public class Indexer {
-    public static Map<String, List<Document>> WordDoecArr;
+    public static Map<String, List<Document>> WordDocArr;
     public static List<String> WordList;
     public static List<Document> ReadyWords;
-    private static MongoDB mongo;
+    private static MongoDB mongoDB;
     private static int Quantum = -1;
 
     public static void main(String[] args) throws Exception {
 
-        // ================make the monogo connection================//
-        mongo = new MongoDB();
-        mongo.initializeDatabaseConnection();
-        /// ======make the initialization ===//
-        WordDoecArr = new HashMap<>();
+        // ================ establish mongo connection ================//
+        mongoDB = new MongoDB();
+        mongoDB.initializeDatabaseConnection();
+        /// ====== perform initializations ===//
+        WordDocArr = new HashMap<>();
         ReadyWords = new ArrayList<>();
         WordList = new ArrayList<>();
-        // git number of page for thread//
         long startTime = System.currentTimeMillis();
 
-        System.out.println("Enter Number of page per thread : ");
+        // get number of pages for each thread//
+        System.out.println("Enter Number of pages per thread: ");
 
         while (Quantum < 1)
             try {
@@ -52,13 +52,12 @@ public class Indexer {
             }
 
         // =====retrive the pages that has not been indexed =====//
-        List<Document> pageCollection = mongo.getnonIndexedPages();
+        List<Document> pageCollection = mongoDB.getnonIndexedPages();
 
         if (pageCollection.isEmpty()) {
-            mongo.closeConnection();
-            long finishTime = System
-                    .currentTimeMillis();
-            System.out.println("Time taken to indexer :" + (finishTime - startTime) + "ms");
+            mongoDB.closeConnection();
+            long finishTime = System.currentTimeMillis();
+            System.out.println("Time taken by indexer: " + (finishTime - startTime) + " ms");
             return;
         }
 
@@ -69,51 +68,51 @@ public class Indexer {
         // }
         List<Thread> arrThread = new ArrayList<>();
         int numThread = 0;
-        // Thread t = new index(0, PageDocument.size(), PageDocument);
-        // t.start();
-        // t.join();
+
         for (int i = 0; i < pageCollection.size(); i = i + Quantum) {
-            Thread t = new preIndexing(numThread, Quantum, pageCollection, mongo);
+            Thread t = new PreIndexing(numThread, Quantum, pageCollection, mongoDB);
             numThread++;
             t.setName("preIndexing Spider " + numThread);
             t.start();
             arrThread.add(t);
         }
-        // new index(0, URLS.length, URLS).start();
 
-        for (Thread tt : arrThread) {
-            tt.join();
-            System.out.println("the Thread " + tt.getName() + " is killed");
+        for (Thread t : arrThread) {
+            t.join();
+            System.out.println("the Thread " + t.getName() + " is done");
         }
 
-        // ==== get all the words form data base and drop wordcollection
-        List<Document> words = mongo.getWords();
-        for (Document d : words) {
-            Object word_val = d.get("word");
-            String word_value = (String) word_val;
-            Object word_P = d.get("pages");
+        // ==== get all the words form database and drop wordcollection
+        List<Document> words = mongoDB.getWords();
+
+        for (Document wordDoc : words) {
+            //Object word_val = d.get("word");
+            //String word_value = (String) word_val;
+
+            String word_value = wordDoc.getString("word");
+
+            Object word_P = wordDoc.get("pages");
             List<Document> Word_Pages = (List<Document>) word_P;
 
-            if (WordDoecArr.containsKey(word_val)) {
-                List<Document> pageList = Indexer.WordDoecArr.get(word_val);
-                pageList.addAll(Word_Pages);
+            if (WordDocArr.containsKey(word_value)) {
+                //List<Document> pageList = Indexer.WordDocArr.get(word_value);
+                //pageList.addAll(Word_Pages);
+                //WordDocArr.put(word_value, pageList);
 
-                WordDoecArr.put(word_value, pageList);
+                Indexer.WordDocArr.get(word_value).addAll(Word_Pages);
 
-                // =========if not exists so you do not need update this document===========//
+                // =========if it does not exist then no need to update document===========//
             } else {
-
-                WordDoecArr.put(word_value, (List<Document>) Word_Pages);
-
+                WordDocArr.put(word_value, Word_Pages);
             }
         }
         // ====drop word collection======//
-        mongo.dropCollection("Word");
+        mongoDB.dropCollection("Word");
 
-        for (Map.Entry<String, List<Document>> entry : WordDoecArr.entrySet()) {
+        for (Map.Entry<String, List<Document>> entry : WordDocArr.entrySet()) {
             WordList.add(entry.getKey());
         }
-        System.out.println(WordDoecArr.size());
+        System.out.println(WordDocArr.size());
         System.out.println(WordList.size());
 
         List<Thread> arrThreads = new ArrayList<>();
@@ -122,14 +121,14 @@ public class Indexer {
         // te.start();
         // te.join();
 
-        for (int i = 0; i < WordList.size(); i = i + 500) {
+        long numPages = mongoDB.pageCollection.countDocuments();
 
-            Thread t = new setIDF(numThread, 500);
+        for (int i = 0; i < WordList.size(); i = i + 500) {
+            Thread t = new setIDF(numThread, 500, numPages);
             numThread++;
             t.setName("Indexer Spider IDF " + numThread);
             t.start();
             arrThreads.add(t);
-
         }
 
         for (Thread tt : arrThreads) {
@@ -138,23 +137,23 @@ public class Indexer {
         }
         // ====if no word exists close connection======//
         if (ReadyWords.isEmpty()) {
-            mongo.closeConnection();
-            long finishTime = System
-                    .currentTimeMillis();
-            System.out.println("Time taken to indexer :" + (finishTime - startTime) + "ms");
+            mongoDB.closeConnection();
+            long finishTime = System.currentTimeMillis();
+
+            System.out.println("Time taken by indexer: " + (finishTime - startTime) + " ms");
             return;
         }
 
         System.out.println(ReadyWords.size());
-        mongo.insetMany(ReadyWords, "Word");
+        mongoDB.insertMany(ReadyWords, "Word");
 
-        mongo.closeConnection();
+        mongoDB.closeConnection();
         System.out.println(ReadyWords.size());
-        System.out.println(WordDoecArr.size());
+        System.out.println(WordDocArr.size());
         System.out.println(WordList.size());
         long finishTime = System
                 .currentTimeMillis();
-        System.out.println("Time taken to indexer :" + (finishTime - startTime) + "ms");
+        System.out.println("Time taken by indexer: " + (finishTime - startTime) + " ms");
 
     }
 }

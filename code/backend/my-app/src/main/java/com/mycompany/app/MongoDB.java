@@ -10,8 +10,6 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Sorts;
-
-// import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Updates;
 
 import org.bson.BsonValue;
@@ -25,7 +23,6 @@ import java.util.Set;
 
 // import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
-// import org.bson.types.ObjectId;
 // import org.springframework.data.mongodb.core.query.Criteria;
 // import org.springframework.data.mongodb.core.query.Update;
 import org.bson.types.ObjectId;
@@ -50,7 +47,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.ArrayList;
-// import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -58,10 +54,6 @@ import java.util.Map;
 
 import com.mongodb.client.*;
 import com.mongodb.client.model.Field;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Projections;
-import org.bson.BsonValue;
-import org.bson.Document;
 import com.mongodb.client.result.InsertOneResult;
 
 import static com.mongodb.client.model.Filters.and;
@@ -98,20 +90,18 @@ public class MongoDB {
     MongoCollection<Document> wordCollection;
     MongoCollection<Document> historyCollection;
     MongoCollection<Document> retrievedCollection;
-
     MongoCollection<Document> visitedCollection;
     MongoCollection<Document> toVisitCollection;
 
     public void initializeDatabaseConnection() {
         mongoClient = MongoClients.create();
         database = mongoClient.getDatabase("SearchEngin");
+
         pageCollection = database.getCollection("Page");
         wordCollection = database.getCollection("Word");
         historyCollection = database.getCollection("History");
-
         toVisitCollection = database.getCollection("ToVisit");
         visitedCollection = database.getCollection("Visited");
-
         retrievedCollection = database.getCollection("Retrieved");
 
         System.out.println("Connected to Database successfully");
@@ -220,7 +210,7 @@ public class MongoDB {
         return (int) toVisitCollection.countDocuments() + (int) visitedCollection.countDocuments();
     }
 
-    public void insetMany(List<Document> ls, String collectionName) {
+    public void insertMany(List<Document> ls, String collectionName) {
 
         InsertManyResult resultmany;
 
@@ -289,13 +279,11 @@ public class MongoDB {
     }
 
     public List<Document> getWords() { /// work correct 👌
-        // git all the document of word in database
+        // get all the document of words in database
         FindIterable<Document> iterable = wordCollection.find();
         List<Document> result = new ArrayList<>();
         iterable.into(result);
-
         return result;
-
     }
 
     public void updateIDF(double IDF, List<Document> pagesList, String word) {
@@ -309,22 +297,18 @@ public class MongoDB {
     public void updatePagesList(String word, List<Document> list) {
         Bson updates = Updates.combine(Updates.set("pages", list));
         wordCollection.updateOne(eq("word", word), updates);
-
     }
 
-    public List<Document> getCrawllerPages() {
+    public List<Document> getCrawlerPages() {
         FindIterable<Document> iterable = pageCollection.find();
         List<Document> result = new ArrayList<>();
         iterable.into(result);
         return result;
-
     }
 
-    public void isIndexed(ObjectId id) { // make the page index true
-
+    public void setIndexedAsTrue(ObjectId id) {
         Bson updates = Updates.combine(Updates.set("isIndexed", true));
         pageCollection.updateOne(eq("_id", id), updates);
-
     }
 
     public List<Document> getnonIndexedPages() {
@@ -332,7 +316,6 @@ public class MongoDB {
         List<Document> result = new ArrayList<>();
         iterable.into(result);
         return result;
-
     }
 
     Set<String> searchPhrase(String phrase) {
@@ -350,9 +333,12 @@ public class MongoDB {
         return commonLinks;
     }
 
-    /** returns a list of links to pages that contain a given word
+    /**
+     * returns a list of links to pages that contain a given word
+     * 
      * @param word your search term
-     * @return list of strings -> the URL of each page that contains a reference to said word 
+     * @return list of strings -> the URL of each page that contains a reference to
+     *         said word
      */
     // MIGHT NEED TO EDIT THIS TO COMPLY WITH CURRENT SCHEMA!
     List<String> getPages(String word) {
@@ -371,7 +357,8 @@ public class MongoDB {
     }
 
     /**
-     * Updates IDF for each word in word collection according to existing metrics (as IDF = total n of pages / DF)
+     * Updates IDF for each word in word collection according to existing metrics
+     * (as IDF = total n of pages / DF)
      */
     void updateIDF() {
         Bson projection = fields(include("Word", "No_pages"), excludeId());
@@ -387,8 +374,10 @@ public class MongoDB {
     }
 
     /**
-     * Updates TF for each reference (in a particular page) for each word in the word collection,
-     * based on existing metrics (as TF = times mentioned in page 'frequency' / total n of words in page).
+     * Updates TF for each reference (in a particular page) for each word in the
+     * word collection,
+     * based on existing metrics (as TF = times mentioned in page 'frequency' /
+     * total n of words in page).
      */
     void updateTF() {
         Bson projection = fields(include("Word", "Pages"), excludeId());
@@ -406,11 +395,11 @@ public class MongoDB {
             }
         }
 
-
     }
 
     /**
-     * Updates rank (TF-IDF) for each reference (in a particular page) of each word based on existing TF & IDF metrics.
+     * Updates rank (TF-IDF) for each reference (in a particular page) of each word
+     * based on existing TF & IDF metrics.
      */
     void updateRank() {
         Bson projection = fields(include("Word", "IDF", "Pages.Doc_Id", "Pages.TF", "Pages.Rank"), excludeId());
@@ -439,12 +428,11 @@ public class MongoDB {
             while (cursor.hasNext()) {
                 Document doc = cursor.next();
                 Object obj = doc.get("Pages");
-                for(Document d:(List<Document>)obj)
-                {
+                for (Document d : (List<Document>) obj) {
                     String link = d.getString("Link");
                     Double rank = d.getDouble("Rank");
                     Double prev = map.get(link);
-                    if ( prev == null)
+                    if (prev == null)
                         map.put(link, rank);
                     else
                         map.put(link, rank + prev);
