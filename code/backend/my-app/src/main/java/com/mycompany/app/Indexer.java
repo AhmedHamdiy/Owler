@@ -124,7 +124,7 @@ public class Indexer {
         long numPages = mongoDB.pageCollection.countDocuments();
 
         for (int i = 0; i < WordList.size(); i = i + 500) {
-            Thread t = new setIDF(numThread, 500, numPages);
+            Thread t = new SetIDF(numThread, 500, numPages);
             numThread++;
             t.setName("Indexer Spider IDF " + numThread);
             t.start();

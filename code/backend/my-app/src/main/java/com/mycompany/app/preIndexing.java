@@ -36,8 +36,7 @@ public class PreIndexing extends Thread {
     private int interval;
     private List<Document> pageCollection;
     private MongoDB mongoDB;
-    static String suffixPatternRegex = "(ly|ward|wise|ed|en|er|ing|ize|iseable|ible|al|ant" +
-        "|ary|fulious|ous|ive|less|eer|er|ion|ism|ity|ment|ness|or|sion|ship|th|ful)$";
+    static String suffixPatternRegex = "(ly|ward|wise|ed|en|er|ing|ize|iseable|ible|al|ant|ary|fulious|ous|ive|less|eer|er|ion|ism|ity|ment|ness|or|sion|ship|th|ful)$";
 
     public PreIndexing(int index, int i, List<Document> docs, MongoDB mongo) {
         num = index;

@@ -14,12 +14,12 @@ import java.util.List;
 import java.lang.Math;
 import org.bson.Document;
 
-public class setIDF extends Thread {
+public class SetIDF extends Thread {
     private int num;
     private int interval;
     private long numPages;
 
-    public setIDF(int n, int q, long numPages) {
+    public SetIDF(int n, int q, long numPages) {
         num = n;
         interval = q;
         this.numPages = numPages;

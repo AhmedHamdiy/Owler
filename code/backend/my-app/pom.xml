@@ -3,13 +3,13 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.techprimers.mongodb</groupId>
-	<artifactId>spring-boot-mongodb-example</artifactId>
+	<groupId>com.crowler.app</groupId>
+	<artifactId>crowler</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>spring-boot-mongodb-example</name>
-	<description>Demo project for Spring Boot</description>
+	<name>Crowler</name>
+	<description>Crowler:SearchEngine</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -31,7 +31,6 @@
             <artifactId>stanford-corenlp</artifactId>
             <version>3.9.2</version>
         </dependency>
-
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
@@ -68,7 +67,7 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
-            <version>5.3.0</version>
+            <version>9.10.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>
@@ -100,7 +99,11 @@
             <artifactId>javafx-base</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
+        <dependency>
+           <groupId>org.apache.opennlp</groupId>
+           <artifactId>opennlp-tools</artifactId>
+          <version>2.3.3</version>
+        </dependency>
 	</dependencies>
 
 	<build>
@@ -114,14 +117,10 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass><com class="your package com"></com></mainClass>
+                    <!-- <mainClass><com class="your package com"></com></mainClass> -->
+                    <mainClass>com.mycompany.app.Ranker</mainClass>
                 </configuration>
             </plugin>
 		</plugins>
 	</build>
-
-
-
 </project>
-
-
