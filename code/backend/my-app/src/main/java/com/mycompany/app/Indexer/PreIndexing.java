@@ -33,6 +33,8 @@ import org.jsoup.select.Elements;
 import com.mycompany.app.MongoDB;
 import com.mycompany.app.Pair;
 
+import opennlp.tools.stemmer.PorterStemmer;
+
 public class PreIndexing extends Thread {
 
     private int num;
@@ -48,10 +50,11 @@ public class PreIndexing extends Thread {
         mongoDB = mongo;
     }
 
-    static List<Pair<String, Integer>> filterWords(Elements elements) {
+    static List<Pair<String, Double>> filterWords(Elements elements) {
 
         // Stores each valid word extracted from the page, with its tag number
-        List<Pair<String, Integer>> wordPairs = new ArrayList<>();
+        List<Pair<String, Double>> wordPairs = new ArrayList<>();
+        PorterStemmer stemmer = new PorterStemmer();
 
         for (Element element : elements) {
             String tagName = element.tagName();
@@ -63,7 +66,6 @@ public class PreIndexing extends Thread {
                 continue;
 
             // =============remove numbers==================//
-
             String text = element.ownText().trim().replaceAll("\\b\\d+\\b", "");
             
             // ============== remove special characters=========//
@@ -73,16 +75,20 @@ public class PreIndexing extends Thread {
                 // ========= split the text to words==========///
                 String[] words = text.split("\\s+");
 
-                // ==store the result in a new list of pair that store word with the tagname==//
+                // ==store the result in a new list of pair that stores word with tagNum==//
                 for (String word : words) {
-                    word = word.replaceAll(suffixPatternRegex, "");
+                    word = word.toLowerCase();
+                    //String stemmedWord = stemmer.stem(word);
+                    //word = word.replaceAll(suffixPatternRegex, "");
+                    word = stemmer.stem(word);
 
-                    if (isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) {
+                    if (isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) 
                         continue;
-                    }
-                    int tagNum = getTagNum(tagName);
-
-                    Pair<String, Integer> newPair = new Pair<>(word, tagNum);
+                    
+                    double tagNum = getTagNum(tagName);
+                    
+                    
+                    Pair<String, Double> newPair = new Pair<>(word, tagNum);
                     wordPairs.add(newPair);
                 }
             }
@@ -90,29 +96,27 @@ public class PreIndexing extends Thread {
         return wordPairs;
     }
 
-    private static Integer getTagNum(String tagName) {
+    private static Double getTagNum(String tagName) {
         if (tagName == "h1")
-            return 1;
+            return 0.15;
         else if (tagName == "h2")
-            return 2;
+            return 0.13;
         else if (tagName == "h3")
-            return 3;
+            return 0.12;
         else if (tagName == "h4")
-            return 4;
+            return 0.11;
         else if (tagName == "h5")
-            return 5;
+            return 0.1;
         else if (tagName == "h6")
-            return 6;
+            return 0.09;
         else if (tagName == "p" || tagName == "span")
-            return 7;
+            return 0.05;
         else
-            return 8;
+            return 0.01;
     }
 
     private static boolean isStopWord(String word) {
-       // Path path = Paths.get(
-       //         "D:\\term2_sec\\APT\\Project\\My-Part\\Crowler\\code\\backend\\my-app\\src\\main\\java\\com\\mycompany\\app\\stopWords.txt");
-       Path path = Paths.get(     "code\\backend\\my-app\\src\\stopWords.txt");
+       Path path = Paths.get("code\\backend\\my-app\\src\\stopWords.txt");
         
        try {
             String content = Files.readString(path);
@@ -136,12 +140,11 @@ public class PreIndexing extends Thread {
             org.jsoup.nodes.Document document = Jsoup.parse(htmlString);
 
             /// ============= if the page is already indexed, ignore it =============///
-
             if ((boolean) pageCollection.get(i).get("isIndexed"))
                 continue;
 
             // ===== create a map to keep track of the word frequency and tag number =========//
-            Map<String, Pair<Integer, Integer>> wordFreq = new HashMap<>();
+            Map<String, Pair<Integer, Double>> wordFreq = new HashMap<>();
 
             double numTerms = 0;
 
@@ -152,25 +155,24 @@ public class PreIndexing extends Thread {
             Elements elements = document.select("*");
 
             /// ======== filter elements ===============//
-            List<Pair<String, Integer>> wordPairs = filterWords(elements);
+            List<Pair<String, Double>> wordPairs = filterWords(elements);
 
             // =========loop over the of elements=========//
-            for (Pair<String, Integer> wordPair : wordPairs) {
+            for (Pair<String, Double> wordPair : wordPairs) {
                 numTerms++;
 
                 if (wordFreq.containsKey(wordPair.getKey())) {
                     int frequency = wordFreq.get(wordPair.getKey()).getKey();
                     frequency++;
 
-                    int tagNum = wordFreq.get(wordPair.getKey()).getValue();
-                    if (tagNum > wordPair.getValue())
+                    Double tagNum = wordFreq.get(wordPair.getKey()).getValue();
+                    if (tagNum < wordPair.getValue())
                         tagNum = wordPair.getValue();
 
-                    wordFreq.put(wordPair.getKey(), new Pair<Integer, Integer>(frequency, tagNum));
+                    wordFreq.put(wordPair.getKey(), new Pair<Integer, Double>(frequency, tagNum));
                 } else {
-                    wordFreq.put(wordPair.getKey(), new Pair<Integer, Integer>(1, wordPair.getValue()));
+                    wordFreq.put(wordPair.getKey(), new Pair<Integer, Double>(1, wordPair.getValue()));
                 }
-
             }
 
             // =========get page id ======================//
@@ -180,24 +182,21 @@ public class PreIndexing extends Thread {
             int freq; // ===>FREQUENCY OF THE WORD
             double TF; // ===>TF OF THE PAGE
 
-            for (Map.Entry<String, Pair<Integer, Integer>> wordEntry : wordFreq.entrySet()) {
+            for (Map.Entry<String, Pair<Integer, Double>> wordEntry : wordFreq.entrySet()) {
 
                 freq = (int) wordEntry.getValue().getKey();
                 TF = freq / numTerms;
 
-                //// ====create a new document of page for word=============//
-                Document newPage = new Document("_id", id).append("frequency",
-                        freq).append("TF", TF).append("tag", (int) wordEntry.getValue().getValue());
+                // ========create a new document of page for word=============//
+                Document newPage = new Document("_id", id).append("Frequency",
+                        freq).append("TF", TF).append("Tag", wordEntry.getValue().getValue());
 
-                // synchronized over the map of word ============///
+                //=====  synchronized over the map of words ============///
                 synchronized (Indexer.WordDocArr) {
                     /// ==========IF THE WORD EXISTS IN THE MAP SO WILL UPDATE ONLY ==///////
                     if (Indexer.WordDocArr.containsKey(wordEntry.getKey())) {
-                        //List<Document> pageList = Indexer.WordDoecArr.get(wordEntry.getKey());
-                        //pageList.add(newPage);
 
                         synchronized (Indexer.WordDocArr) {
-                            //Indexer.WordDoecArr.put(wordEntry.getKey(), pageList);
                             Indexer.WordDocArr.get(wordEntry.getKey()).add(newPage);
                         }
                         // =========IF IT DOES NOT EXIST, WILL INSERT A NEW ONE===========//
@@ -207,7 +206,6 @@ public class PreIndexing extends Thread {
                         synchronized (Indexer.WordDocArr) {
                             Indexer.WordDocArr.put(wordEntry.getKey(), pageList);
                         }
-
                     }
                 }
             }

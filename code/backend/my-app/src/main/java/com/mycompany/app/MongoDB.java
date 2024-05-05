@@ -14,47 +14,18 @@ import com.mongodb.client.model.Updates;
 
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
 
-import java.util.Objects;
-import java.util.Set;
-
-// import org.bson.BsonObjectId;
-import org.bson.conversions.Bson;
-// import org.springframework.data.mongodb.core.query.Criteria;
-// import org.springframework.data.mongodb.core.query.Update;
-import org.bson.types.ObjectId;
-
-// import java.io.*;
-
-// import static java.lang.System.*;
-// import static com.mongodb.MongoClientSettings.getDefaultCodecRegistry;
-// import static com.mongodb.client.model.Filters.all;
 import static com.mongodb.client.model.Filters.eq;
-// import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
-// import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
-
-import org.bson.codecs.configuration.CodecProvider;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
-import com.mongodb.MongoException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 //
-
 import com.mongodb.client.*;
 import com.mongodb.client.model.Field;
-import com.mongodb.client.result.InsertOneResult;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Projections.*;
@@ -64,7 +35,6 @@ import java.lang.Object;
 
 import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 
 import java.io.*;
 
@@ -80,35 +50,32 @@ import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import com.mongodb.MongoException;
+import org.springframework.stereotype.Component;
 
-import javax.print.Doc;
-
+@Component
 public class MongoDB {
     public MongoClient mongoClient;
     public MongoDatabase database;
     public MongoCollection<Document> pageCollection;
     public MongoCollection<Document> wordCollection;
     public MongoCollection<Document> historyCollection;
-    public MongoCollection<Document> retrievedCollection;
     public MongoCollection<Document> visitedCollection;
     public MongoCollection<Document> toVisitCollection;
 
     public void initializeDatabaseConnection() {
         mongoClient = MongoClients.create();
-        database = mongoClient.getDatabase("SearchEngin");
+        database = mongoClient.getDatabase("Crowler");
 
         pageCollection = database.getCollection("Page");
         wordCollection = database.getCollection("Word");
         historyCollection = database.getCollection("History");
         toVisitCollection = database.getCollection("ToVisit");
         visitedCollection = database.getCollection("Visited");
-        retrievedCollection = database.getCollection("Retrieved");
 
         System.out.println("Connected to Database successfully");
     }
 
     public void PrintCollectionData(String colName) {
-
         MongoCollection<Document> collections = database.getCollection(colName);
         try (MongoCursor<Document> cursor = collections.find()
                 .iterator()) {
@@ -142,12 +109,6 @@ public class MongoDB {
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
-            case "Retrieved":
-                result = retrievedCollection.insertOne(doc);
-                System.out.println("Inserted a document with the following id: "
-                        + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
-                break;
-
             case "Visited":
                 result = visitedCollection.insertOne(doc);
                 System.out.println("Inserted a document with the following id: "
@@ -172,9 +133,6 @@ public class MongoDB {
                 break;
             case "History":
                 historyCollection.drop();
-                break;
-            case "Retrieved":
-                retrievedCollection.drop();
                 break;
             case "Visited":
                 visitedCollection.drop();
@@ -234,12 +192,6 @@ public class MongoDB {
                     System.out.println(entry.getValue().asObjectId());
                 }
                 break;
-            case "Retrieved":
-                resultmany = retrievedCollection.insertMany(ls);
-                for (Map.Entry<Integer, BsonValue> entry : resultmany.getInsertedIds().entrySet()) {
-                    System.out.println(entry.getValue().asObjectId());
-                }
-                break;
         }
     }
 
@@ -260,22 +212,19 @@ public class MongoDB {
 
     public void closeConnection() {
         mongoClient.close();
-        System.out.println("The Connection is closed");
+        System.out.println("Connection with mongoDB is closed");
     }
 
     public boolean isContainWord(String word) {
-
         Document doc = wordCollection.find(eq("word", word)).first();
         if (doc == null)
             return false;
 
         return true;
-
     }
 
     public long getNumPagesInWord(String word) { /// work correct 👌
         return FindWordPages(word).size();
-
     }
 
     public List<Document> getWords() { /// work correct 👌
@@ -287,7 +236,6 @@ public class MongoDB {
     }
 
     public void updateIDF(double IDF, List<Document> pagesList, String word) {
-
         Bson updates = Updates.combine(Updates.set("IDF", IDF),
                 Updates.set("pages", pagesList));
         wordCollection.updateOne(eq("word", word), updates);
@@ -394,7 +342,6 @@ public class MongoDB {
                 wordCollection.updateOne(filter, set("Pages.$.TF", (double) frequency / totalWords));
             }
         }
-
     }
 
     /**
@@ -418,59 +365,14 @@ public class MongoDB {
         }
     }
 
-    public HashMap<ObjectId, Double> getQueryRelevance(String query) {
-        String[] queryWords = query.split("\\s+");
-        // HashMap<String, Double> map = new HashMap<String, Double>();
-        HashMap<ObjectId, Double> map = new HashMap<ObjectId, Double>();
-
-        for (String queryWord : queryWords) {
-            queryWord = queryWord.toLowerCase();
-        }
-
-        for (String queryWord : queryWords) {
-            Bson filter = Filters.eq("word", queryWord);
-            // Bson projection = fields(include("Pages.Rank", "Pages.Doc_Id", "Pages.Link"),
-            // excludeId());
-            Bson projection = fields(include("pages.rank", "pages._id"), excludeId());
-            MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
-            while (cursor.hasNext()) {
-                Document doc = cursor.next();
-                Object obj = doc.get("pages");
-                for (Document d : (List<Document>) obj) {
-                    // String link = d.getString("Link");
-                    ObjectId id = d.getObjectId("_id");
-                    Double rank = d.getDouble("rank");
-                    Double prev = map.get(id);
-                    if (prev == null)
-                        map.put(id, rank);
-                    else
-                        map.put(id, rank + prev);
-                }
-            }
-        }
-        return map;
+    MongoCursor<Document> getWordPagesCursor(String queryWord) {
+        Bson filter = Filters.eq("Word", queryWord);
+        Bson projection = fields(include("Pages.TF_IDF", "Pages._id", "Pages.Tag"), excludeId());
+        MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
+        return cursor;
     }
 
-    public Document findPage(ObjectId id) {
+    public Document findPageById(ObjectId id) {
         return pageCollection.find(eq("_id", id)).first();
-    }
-
-    public static void main(String[] args) {
-        MongoDB mongoDB = new MongoDB();
-        mongoDB.initializeDatabaseConnection();
-
-        Bson filter = Filters.eq("word", "VETERANS");
-        Bson projection = fields(include("pages.rank", "pages._id"));
-        MongoCursor<Document> cursor = mongoDB.wordCollection.find(filter).projection(projection).iterator();
-        while (cursor.hasNext()) {
-            Document doc = cursor.next();
-            Object obj = doc.get("pages");
-            for (Document d : (List<Document>) obj) {
-                // String link = d.getString("Link");
-                ObjectId id = d.getObjectId("_id");
-                Double rank = d.getDouble("rank");
-                System.out.println("DOCUMENT FOR word: " + id + " " + rank);         
-            }
-        }
     }
 }

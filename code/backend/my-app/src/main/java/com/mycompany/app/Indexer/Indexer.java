@@ -63,11 +63,6 @@ public class Indexer {
             return;
         }
 
-        // for (Document d : PageDocument) {
-        // Object ID = d.get("_id");
-        // ObjectId id = (ObjectId) ID;
-        // mongo.isIndexed(id);
-        // }
         List<Thread> arrThread = new ArrayList<>();
         int numThread = 0;
 
@@ -81,26 +76,20 @@ public class Indexer {
 
         for (Thread t : arrThread) {
             t.join();
-            System.out.println("the Thread " + t.getName() + " is done");
+            System.out.println("The thread " + t.getName() + " is done");
         }
 
-        // ==== get all the words form database and drop wordcollection
+        // ==== get all the words form database and drop wordCollection
         List<Document> words = mongoDB.getWords();
 
         for (Document wordDoc : words) {
-            //Object word_val = d.get("word");
-            //String word_value = (String) word_val;
 
-            String word_value = wordDoc.getString("word");
+            String word_value = wordDoc.getString("Word");
 
-            Object word_P = wordDoc.get("pages");
+            Object word_P = wordDoc.get("Pages");
             List<Document> Word_Pages = (List<Document>) word_P;
 
             if (WordDocArr.containsKey(word_value)) {
-                //List<Document> pageList = Indexer.WordDocArr.get(word_value);
-                //pageList.addAll(Word_Pages);
-                //WordDocArr.put(word_value, pageList);
-
                 Indexer.WordDocArr.get(word_value).addAll(Word_Pages);
 
                 // =========if it does not exist then no need to update document===========//
@@ -119,9 +108,6 @@ public class Indexer {
 
         List<Thread> arrThreads = new ArrayList<>();
         numThread = 0;
-        // Thread te = new UpdateIDF(0, WordDocument.size(), WordDocument);
-        // te.start();
-        // te.join();
 
         long numPages = mongoDB.pageCollection.countDocuments();
 

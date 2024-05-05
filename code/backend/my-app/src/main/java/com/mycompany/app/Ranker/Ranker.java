@@ -12,6 +12,7 @@ import org.bson.types.ObjectId;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.stereotype.Component;
 
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
@@ -28,6 +29,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 
+@Component
 public class Ranker {
     final private MongoDB mongoDB = new MongoDB();
     final private String pageCollection = "Page";
@@ -39,26 +41,13 @@ public class Ranker {
         mongoDB.initializeDatabaseConnection();
     }
 
-    void pageRanking(String query) {
-        HashMap<ObjectId, Double> result = mongoDB.getQueryRelevance(query);
-        List<ObjectId> sortedLinks = sortPages(result);
-        System.out.println(sortedLinks);
-    }
-
-    List<ObjectId> sortPages(HashMap<ObjectId, Double> result) {
-        List<Map.Entry<ObjectId, Double>> list = new ArrayList<>(result.entrySet());
-
-        list.sort(new Comparator<Map.Entry<ObjectId, Double>>() {
+    public void sortPages(List<Document> unsortedResult) {
+        unsortedResult.sort(new Comparator<Document>() {
             @Override
-            public int compare(Map.Entry<ObjectId, Double> o1, Map.Entry<ObjectId, Double> o2) {
-                return o2.getValue().compareTo(o1.getValue());
+            public int compare(Document d1, Document d2) {
+                return d2.getDouble("Rank").compareTo(d1.getDouble("Rank"));
             }
         });
-
-        List<ObjectId> sortedLinks = new ArrayList<>();
-        for (Map.Entry<ObjectId, Double> entry : list)
-            sortedLinks.add(entry.getKey());
-        return sortedLinks;
     }
 
     void computePagePopularity() {

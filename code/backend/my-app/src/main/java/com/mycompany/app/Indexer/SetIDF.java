@@ -40,14 +40,14 @@ public class SetIDF extends Thread {
             
             // loop over pages
             for (Document page : pages) {
-                double rank;
-                double tf = page.getDouble("TF");
+                double TF_IDF;
+                double TF = page.getDouble("TF");
                 // update the rank for every object in the list rank=TF*IDF
-                rank = tf * IDF;
-                page.append("rank", rank);
+                TF_IDF = TF * IDF;
+                page.append("TF_IDF", TF_IDF);
             }
             // =====create a new word document and store it in a list of Document ===//
-            Document word = new Document("word", Indexer.WordList.get(i)).append("pages", pages).append("IDF", IDF);
+            Document word = new Document("Word", Indexer.WordList.get(i)).append("Pages", pages).append("IDF", IDF);
 
             synchronized (Indexer.ReadyWords) {
                 Indexer.ReadyWords.add(word);
