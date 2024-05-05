@@ -1,8 +1,8 @@
-# Crowler
+# Owler
 <p align="center">
-  <img src="./logo.png" alt="Crowler">
+  <img src="./code/frontend/src/Styles/Owl.png" alt="Owler">
 </p>
 
 ---
-Crowler: A Multithreaded Crawler-Based Search Engine. t is developed in Java for an Advanced Programming Techniques (APT) course.
+Owler: A Multithreaded Crawler-Based Search Engine. It is developed in Java for an Advanced Programming Techniques (APT) course.
 
