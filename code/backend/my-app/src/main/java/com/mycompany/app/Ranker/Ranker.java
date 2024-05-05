@@ -1,4 +1,4 @@
-package com.mycompany.app;
+package com.mycompany.app.Ranker;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -8,6 +8,7 @@ import java.util.*;
 
 import org.apache.xalan.xsltc.runtime.Node;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -15,6 +16,7 @@ import org.jsoup.select.Elements;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import com.mycompany.app.MongoDB;
 
 import org.apache.xalan.xsltc.runtime.Node;
 import org.bson.Document;
@@ -38,52 +40,44 @@ public class Ranker {
     }
 
     void pageRanking(String query) {
-        HashMap<String, Double> result = mongoDB.getQueryRelevance(query);
-        List<String> sortedLinks = sortLinks(result);
+        HashMap<ObjectId, Double> result = mongoDB.getQueryRelevance(query);
+        List<ObjectId> sortedLinks = sortPages(result);
         System.out.println(sortedLinks);
     }
 
-    List<String> sortLinks(HashMap<String, Double> result) {
-        List<Map.Entry<String, Double>> list = new ArrayList<>(result.entrySet());
+    List<ObjectId> sortPages(HashMap<ObjectId, Double> result) {
+        List<Map.Entry<ObjectId, Double>> list = new ArrayList<>(result.entrySet());
 
-        list.sort(new Comparator<Map.Entry<String, Double>>() {
+        list.sort(new Comparator<Map.Entry<ObjectId, Double>>() {
             @Override
-            public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {
+            public int compare(Map.Entry<ObjectId, Double> o1, Map.Entry<ObjectId, Double> o2) {
                 return o2.getValue().compareTo(o1.getValue());
             }
         });
 
-        List<String> sortedLinks = new ArrayList<>();
-        for (Map.Entry<String, Double> entry : list)
+        List<ObjectId> sortedLinks = new ArrayList<>();
+        for (Map.Entry<ObjectId, Double> entry : list)
             sortedLinks.add(entry.getKey());
         return sortedLinks;
     }
 
     void computePagePopularity() {
         long numPages = mongoDB.pageCollection.countDocuments();
-
         System.out.println("Number of pages in db: " + numPages);
 
         double dampingFactor = 0.85;
-
         Graph PRGraph = createGraph(numPages);
-
         connectNodes(PRGraph);
 
         boolean updated = true;
-
-        int i = 0;
         while (updated) {
 
             // resetting 'updated' at start of each iteration
             updated = false;
 
             for (Graph.Node node : PRGraph.nodes) {
-
                 double prevPageRank = node.pageRank;
-
                 double newPageRank = (1 - dampingFactor) / (double) numPages;
-
                 // calculate sum of share of referencing pages' pageranks
                 double sigma = 0;
 
@@ -102,7 +96,6 @@ public class Ranker {
 
         for (Graph.Node node : PRGraph.nodes)
             mongoDB.pageCollection.updateOne(Filters.eq("Link", node.URL), Updates.set("PageRank", node.pageRank));
-
     }
 
     /**
@@ -112,17 +105,13 @@ public class Ranker {
      * @param numPages
      */
     Graph createGraph(long numPages) {
-
         MongoCursor<Document> cursor = mongoDB.pageCollection.find().iterator();
-
         Graph PRGraph = new Graph();
-
         double initialPR = (double) 1 / numPages;
 
         // Creating a node in the graph for each page, and storing its URL, page rank
         // and outgoing URLs
         while (cursor.hasNext()) {
-
             Document page = cursor.next();
             String URL = page.getString("Link");
 
@@ -137,10 +126,8 @@ public class Ranker {
                 String outgoingURL = tag.attr("href");
                 newNode.outgoingLinks.add(outgoingURL);
             }
-
             PRGraph.nodes.add(newNode);
         }
-
         return PRGraph;
     }
 

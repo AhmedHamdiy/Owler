@@ -1,9 +1,12 @@
-package com.mycompany.app;
+package com.mycompany.app.Crawler;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import com.mycompany.app.MongoDB;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

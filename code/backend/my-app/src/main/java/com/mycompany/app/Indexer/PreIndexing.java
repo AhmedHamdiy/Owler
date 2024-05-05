@@ -13,7 +13,7 @@ check if the page not indexed befor :
  *
  */
 
-package com.mycompany.app;
+package com.mycompany.app.Indexer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,6 +29,9 @@ import org.bson.types.ObjectId;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import com.mycompany.app.MongoDB;
+import com.mycompany.app.Pair;
 
 public class PreIndexing extends Thread {
 

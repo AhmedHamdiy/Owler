@@ -10,7 +10,7 @@
  * 7- deal with data base and insert all the list by InsertMany
  */
 
-package com.mycompany.app;
+package com.mycompany.app.Indexer;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.bson.Document;
+
+import com.mycompany.app.MongoDB;
 
 public class Indexer {
     public static Map<String, List<Document>> WordDocArr;

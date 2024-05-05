@@ -8,7 +8,7 @@
  * 5- return to main to insert list in database
  */
 
-package com.mycompany.app;
+package com.mycompany.app.Indexer;
 
 import java.util.List;
 import java.lang.Math;

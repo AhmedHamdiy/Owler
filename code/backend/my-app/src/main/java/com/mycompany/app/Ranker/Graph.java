@@ -1,4 +1,4 @@
-package com.mycompany.app;
+package com.mycompany.app.Ranker;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.mycompany.app;
+package com.mycompany.app.Crawler;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -9,6 +9,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import org.bson.Document;
+
+import com.mycompany.app.MongoDB;
 
 public class CrawlerMain {
     static MongoDB mongoDB = new MongoDB();
