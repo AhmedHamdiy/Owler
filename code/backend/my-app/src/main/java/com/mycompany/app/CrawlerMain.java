@@ -1,12 +1,10 @@
 package com.mycompany.app;
 import java.util.HashSet;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -20,7 +18,7 @@ public class CrawlerMain {
     
     public static void main(String[] args) {
 
-        System.out.println("Enter the Number of your owls : ");
+        System.out.print("Enter the Number of your owls : ");
         int ThreadNum = 0;
 
         while (ThreadNum < 1)
@@ -32,6 +30,7 @@ public class CrawlerMain {
             }
 
         mongdb.initializeDatabaseConnection();
+
 
         //fetch the visited pages from the database to continue the crawling process (if it was interrupted)
         visitedPages=mongdb.getVisitedPages();
@@ -55,10 +54,11 @@ public class CrawlerMain {
         for (int i = 0; i < ThreadNum; i++)
         try {
             threads[i].join(); 
-            System.out.println("The owler ["+i+"] has joint.\n");
+            System.out.println("The owl ["+i+"] has returned home safe.\n");
         } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+                e.printStackTrace();
+            }
+
         mongdb.closeConnection();
     }
     private static Set<String> fetchSeed(){

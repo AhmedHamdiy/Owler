@@ -36,9 +36,9 @@ public class CrawlerOwL implements Runnable {
             try {
                 org.jsoup.nodes.Document doc = visitPage(nextURL);
                 if (doc != null) {
-                    Elements elements = doc.select("a[href]"); //select all <a> tags that has the href attribute 
+                    Elements elements = doc.select("a[href]"); //Select all <a> tags that has the href attribute 
                     for (Element tag : elements) {
-                        String url = tag.attr("href"); //get the value of href attribute (URL)
+                        String url = tag.attr("href"); //Get the value of href attribute (URL)
                         url = normalizeURL(url, nextURL); 
                         try {
                             if (url != null) {
@@ -63,7 +63,7 @@ public class CrawlerOwL implements Runnable {
                 try {
                     mongodb.insertOne(new org.bson.Document("URL", url), "ToVisit");
                     pendingPages.add(url);
-                    mongodb.notifyAll(); // if there was a thread waiting for a page to crawl
+                    mongodb.notifyAll(); // If there was any thread waiting for a page to crawl
                 } catch (Exception e) {
                     System.err.println("Error: error in inserting the pending page..");
                 }
@@ -90,6 +90,7 @@ public class CrawlerOwL implements Runnable {
                 if (nextURL == null) {
                     //No pages to crawl at this time(waits for any other thread to produce urls to crawl)
                     System.out.println("The "+Thread.currentThread().getName() + " will sleep beacuse it has no pages to crawl\n");
+                    wait();
                 }
                 return nextURL;
             } catch (Exception e) {
@@ -124,11 +125,22 @@ public class CrawlerOwL implements Runnable {
             myConnection.referrer("http://www.google.com");
             org.jsoup.nodes.Document doc = myConnection.get();
             if (myConnection.response().statusCode() == 200) {                    //Check if the URL is allowed to be crawled
+                // Extracting the icon URL
+                Elements iconElements = doc.select("link[rel~=icon]"); // Selecting link tags with rel attribute containing "icon"
+                String iconUrl = null;
+                if (!iconElements.isEmpty()) {
+                    Element iconElement = iconElements.first();
+                    iconUrl = iconElement.attr("href");
+                    // Adjust the icon URL if it's relative
+                    if (!iconUrl.startsWith("http")) {
+                        iconUrl = new URL(new URL(url), iconUrl).toString();
+                    }
+                }
                 String HTMLPage = doc.toString(); //Parsing the HTML page into a string
                 String title = doc.title();
                 insertVisited(url);
-                mongodb.insertOne(new org.bson.Document("Link",url).append("Title", title)
-                                .append("HTML", HTMLPage).append("isIndexed",false), "Pages");
+                mongodb.insertOne(new org.bson.Document("Link",url).append("Title", title).append("LogoURL",iconUrl)
+                                .append("HTML", HTMLPage).append("isIndexed",false), "Page");
                 return doc;
             }
             else
@@ -138,60 +150,81 @@ public class CrawlerOwL implements Runnable {
             return null;
         }
     }
-    
-    private String normalizeURL(String newURL, String source) {
+    public static String normalizeURL(String newURL, String source) {
         try {
             URL url = new URL(source);
+
             if (newURL.startsWith("./")) {
                 newURL = newURL.substring(2);
                 newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
-            } 
-            else if (newURL.startsWith("javascript:")) //Checks for java pages
-                newURL = null;
-            else if (newURL.indexOf('?') != -1) //ignore queries
-                newURL = newURL.substring(0, newURL.indexOf('?'));
-            return newURL;
-        } catch (Exception e) {
-            System.err.println("Error: error in normalizing the link: "+newURL+" ..");
+            } else if (newURL.startsWith("javascript:")) {
+                newURL = null; // Ignore JavaScript links
+            } else if (newURL.indexOf('?') != -1) {
+                newURL = newURL.substring(0, newURL.indexOf('?')); // Ignore query parameters
+            }
+
+            return normalizeURL(newURL); // Normalize the URL
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
             return null;
         }
-
     }
 
-    private static URL normalizePath(URL url) throws MalformedURLException {
-        String path = url.getPath();
-        if (path == null || path.length()==0) {
-            return new URL(url.getProtocol(), url.getHost(), "/");
+    private static String normalizeURL(String url) {
+        try {
+            URL parsedURL = new URL(url.trim());
+            //Remove www subdomain if exists (normalize the domain name)
+            String domain = parsedURL.getHost().startsWith("www.") ? parsedURL.getHost().substring(4) : parsedURL.getHost();
+
+            //Remove ending slash if exists (normalize the path)
+            String path = parsedURL.getPath().endsWith("/") ? parsedURL.getPath().substring(0, parsedURL.getPath().length() - 1) : parsedURL.getPath();
+
+            //Reconstruct the normalized URL
+            return parsedURL.getProtocol() + "://" + domain + path;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return null;
         }
-        return url;
+    }
+
+    private static String normalizePath(URL url) {
+        String path = url.getPath();
+        if (path.endsWith("/")) {
+            return path;
+        } else {
+            int index = path.lastIndexOf('/');
+            if (index != -1) {
+                return path.substring(0, index + 1);
+            }
+            return "/";
+        }
     }
 
     public Boolean isSafe(String url) {
         try {
             URL myURL = new URL(url);
             Set<String> blockedLinks = null;
-
+            //Check if we already have processed this website's robot file before
         if (blocked.containsKey(myURL.toString())) {
             System.out.println(myURL.toString() + " is already in the blocked URLs.");
             blockedLinks= blocked.get(myURL.toString());
         }
         else{
+            //This is the first time to go to this website's robot file so let's process it
             Set<String> robotLinks = new HashSet<>();
-
             try {
+                //Get the robots.txt file
                 URL robotsTextFile = new URL(myURL.getProtocol() + "://" + myURL.getHost() + "/robots.txt");
-                
                 String line;
                 BufferedReader br = new BufferedReader(new InputStreamReader(robotsTextFile.openStream()));
-            
+                
+                //Read the file and git the blocked urls
                 while ((line = br.readLine()) != null) {
                     line = line.trim();
                     Boolean userAgentStatus = line.startsWith("User-agent:") && line.contains("*");
-            
-                    if (userAgentStatus && line.startsWith("Disallow:")) {
+                    if (userAgentStatus && line.startsWith("Disallow:")) { //Block this url
                         String blockedPath = line.substring(10).trim();
                         String blockedURL = myURL.getProtocol() + "://" + myURL.getHost() + blockedPath;
-            
                         robotLinks.add(blockedURL);
                     }
                 }
@@ -203,6 +236,7 @@ public class CrawlerOwL implements Runnable {
                 System.err.println("Error: can't read URL: " + myURL.toString());
                 return false;
             }
+            //Add this website blocked links to the blockedLinks hashSet
             blocked.put(myURL.toString(), robotLinks);
             blockedLinks= robotLinks;
         }
@@ -212,11 +246,11 @@ public class CrawlerOwL implements Runnable {
         }
 
         for (String blockedLink : blockedLinks) {
-            if (url.toString().startsWith(blockedLink)) {
+            if (url.toString().startsWith(blockedLink)) { //If the url is in the blocked URLs block it
                 return false;
             }
         }
-        return true;
+        return true; //It is safe to crawl
         } catch (MalformedURLException e) {
             System.err.println();
             return false;

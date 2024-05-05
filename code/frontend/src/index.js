@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './App';
 import './index.css';
-
+import Owler from './App.js';
 ReactDOM.render(
-  <App />,
+  <Owler/>,
   document.getElementById('root')
 );
