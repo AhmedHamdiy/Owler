@@ -1,7 +1,6 @@
-package com.mycompany.app;
+package com.mycompany.app.Crawler;
 
 import java.util.HashSet;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,8 +10,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import org.bson.Document;
 
+import com.mycompany.app.MongoDB;
+
 public class CrawlerMain {
-    static MongoDB mongodb = new MongoDB();
+    static MongoDB mongoDB = new MongoDB();
     public static Set<String> visitedPages;
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
     public static final String SEED_FILE = "code/backend/my-app/src/seed.txt";
@@ -30,11 +31,11 @@ public class CrawlerMain {
                 ThreadNum = 0;
             }
 
-        mongodb.initializeDatabaseConnection();
+        mongoDB.initializeDatabaseConnection();
 
         // fetch the visited pages from the database to continue the crawling process
         // (if it was interrupted)
-        visitedPages = mongodb.getVisitedPages();
+        visitedPages = mongoDB.getVisitedPages();
 
         if (visitedPages == null) // The crawling process is starting from scratch
             visitedPages = fetchSeed();// Add the seeds to the pending pages
@@ -43,7 +44,7 @@ public class CrawlerMain {
         Thread[] threads = new Thread[ThreadNum];
         for (int i = 0; i < ThreadNum; i++) {
 
-            threads[i] = new Thread(new CrawlerOwL(visitedPages, pendingPages));
+            threads[i] = new Thread(new CrawlerOwl(visitedPages, pendingPages));
             threads[i].setName("Owl (" + Integer.toString(i) + ")");
         }
 
@@ -55,11 +56,12 @@ public class CrawlerMain {
         for (int i = 0; i < ThreadNum; i++)
             try {
                 threads[i].join();
-                System.out.println("The owler [" + i + "] has joined.\n");
+                System.out.println("The owl [" + i + "] has returned home safe.\n");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        mongodb.closeConnection();
+
+        mongoDB.closeConnection();
     }
 
     private static Set<String> fetchSeed() {
@@ -69,12 +71,13 @@ public class CrawlerMain {
             while ((URL = br.readLine()) != null) {
                 System.out.println("Seed URL: " + URL); // Test
                 seeds.add(URL);
-                mongodb.insertOne(new Document("URL", URL), "ToVisit");
+                mongoDB.insertOne(new Document("URL", URL), "ToVisit");
             }
             return seeds;
         } catch (IOException e) {
-            System.err.println("Error in reading seed file.");
+            System.err.println("Error: Error in reading the seed file.");
             return null;
         }
     }
+
 }
