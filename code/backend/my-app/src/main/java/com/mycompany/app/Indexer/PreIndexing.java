@@ -15,6 +15,8 @@ check if the page not indexed befor :
 
 package com.mycompany.app.Indexer;
 
+import com.mycompany.app.Service.ProcessingWords;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -82,7 +84,7 @@ public class PreIndexing extends Thread {
                     //word = word.replaceAll(suffixPatternRegex, "");
                     word = stemmer.stem(word);
 
-                    if (isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) 
+                    if (ProcessingWords.isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) 
                         continue;
                     
                     double tagNum = getTagNum(tagName);
@@ -115,22 +117,7 @@ public class PreIndexing extends Thread {
             return 0.01;
     }
 
-    private static boolean isStopWord(String word) {
-       Path path = Paths.get("code\\backend\\my-app\\src\\stopWords.txt");
-        
-       try {
-            String content = Files.readString(path);
-            String[] stopWords = content.split(",");
-
-            for (String stopWord : stopWords)
-                if (stopWord.trim().equalsIgnoreCase(word)) 
-                    return true;
-                
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+    
 
     public void run() {
 

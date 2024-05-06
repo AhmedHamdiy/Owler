@@ -58,7 +58,7 @@ public class MongoDB {
     public MongoDatabase database;
     public MongoCollection<Document> pageCollection;
     public MongoCollection<Document> wordCollection;
-    public MongoCollection<Document> historyCollection;
+    public MongoCollection<Document> queryHistoryCollection;
     public MongoCollection<Document> visitedCollection;
     public MongoCollection<Document> toVisitCollection;
 
@@ -68,7 +68,7 @@ public class MongoDB {
 
         pageCollection = database.getCollection("Page");
         wordCollection = database.getCollection("Word");
-        historyCollection = database.getCollection("History");
+        queryHistoryCollection = database.getCollection("QueryHistory");
         toVisitCollection = database.getCollection("ToVisit");
         visitedCollection = database.getCollection("Visited");
 
@@ -90,22 +90,16 @@ public class MongoDB {
         switch (collectionName) {
             case "Page":
                 result = pageCollection.insertOne(doc);
-
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
-
                 break;
             case "Word":
-                System.err.println();
-                System.err.println();
                 result = wordCollection.insertOne(doc);
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
-                System.err.println();
-                System.err.println();
                 break;
-            case "History":
-                result = historyCollection.insertOne(doc);
+            case "QueryHistory":
+                result = queryHistoryCollection.insertOne(doc);
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
@@ -119,7 +113,6 @@ public class MongoDB {
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
-
         }
     }
 
@@ -132,7 +125,7 @@ public class MongoDB {
                 wordCollection.drop();
                 break;
             case "History":
-                historyCollection.drop();
+                queryHistoryCollection.drop();
                 break;
             case "Visited":
                 visitedCollection.drop();
@@ -187,7 +180,7 @@ public class MongoDB {
                 }
                 break;
             case "History":
-                resultmany = historyCollection.insertMany(ls);
+                resultmany = queryHistoryCollection.insertMany(ls);
                 for (Map.Entry<Integer, BsonValue> entry : resultmany.getInsertedIds().entrySet()) {
                     System.out.println(entry.getValue().asObjectId());
                 }
@@ -215,7 +208,7 @@ public class MongoDB {
         System.out.println("Connection with mongoDB is closed");
     }
 
-    public boolean isContainWord(String word) {
+    public boolean containsWord(String word) {
         Document doc = wordCollection.find(eq("word", word)).first();
         if (doc == null)
             return false;
@@ -365,8 +358,8 @@ public class MongoDB {
         }
     }
 
-    MongoCursor<Document> getWordPagesCursor(String queryWord) {
-        Bson filter = Filters.eq("Word", queryWord);
+    public MongoCursor<Document> getWordPagesCursor(String queryWord) {
+        Bson filter = eq("Word", queryWord);
         Bson projection = fields(include("Pages.TF_IDF", "Pages._id", "Pages.Tag"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
         return cursor;
@@ -374,5 +367,15 @@ public class MongoDB {
 
     public Document findPageById(ObjectId id) {
         return pageCollection.find(eq("_id", id)).first();
+    }
+
+    public long updateQueryHistory(String query) {
+        Bson filter = Filters.eq("Query", query);
+        Bson update = Updates.inc("Popularity", 1); 
+        return queryHistoryCollection.updateOne(filter, update).getModifiedCount();
+    }
+
+    public MongoCursor<Document> getQueryHistoryCursor() {
+        return queryHistoryCollection.find().iterator();
     }
 }
