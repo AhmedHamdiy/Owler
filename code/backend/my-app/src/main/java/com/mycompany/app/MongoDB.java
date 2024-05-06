@@ -189,15 +189,15 @@ public class MongoDB {
     }
 
     public List<Document> FindWordPages(String word) {
-        Document projection = new Document("pages", 1).append("_id", 0);
+        Document projection = new Document("Pages", 1).append("_id", 0);
 
-        FindIterable<Document> iterable = wordCollection.find(eq("word", word)).projection(projection);
+        FindIterable<Document> iterable = wordCollection.find(eq("Word", word)).projection(projection);
 
         List<Document> result = new ArrayList<>();
         iterable.into(result);
         if (!result.isEmpty()) {
             Document firstDocument = result.get(0);
-            List<Document> pages = firstDocument.getList("pages", Document.class);
+            List<Document> pages = firstDocument.getList("Pages", Document.class);
             return pages;
         }
         return null;
@@ -230,14 +230,14 @@ public class MongoDB {
 
     public void updateIDF(double IDF, List<Document> pagesList, String word) {
         Bson updates = Updates.combine(Updates.set("IDF", IDF),
-                Updates.set("pages", pagesList));
-        wordCollection.updateOne(eq("word", word), updates);
+                Updates.set("Pages", pagesList));
+        wordCollection.updateOne(eq("Word", word), updates);
 
     }
 
     public void updatePagesList(String word, List<Document> list) {
-        Bson updates = Updates.combine(Updates.set("pages", list));
-        wordCollection.updateOne(eq("word", word), updates);
+        Bson updates = Updates.combine(Updates.set("Pages", list));
+        wordCollection.updateOne(eq("Word", word), updates);
     }
 
     public List<Document> getCrawlerPages() {
@@ -259,7 +259,7 @@ public class MongoDB {
         return result;
     }
 
-    public Set<String> searchPhrase(String phrase) {
+    /* public Set<String> searchPhrase(String phrase) {
         String[] words = phrase.split("\\s+");
         Set<String> commonLinks = new HashSet<>();
         List<String> returnedLinks = new ArrayList<>();
@@ -272,7 +272,7 @@ public class MongoDB {
             }
         }
         return commonLinks;
-    }
+    } */
 
     /**
      * returns a list of links to pages that contain a given word

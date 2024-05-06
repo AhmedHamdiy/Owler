@@ -117,8 +117,6 @@ public class PreIndexing extends Thread {
             return 0.01;
     }
 
-    
-
     public void run() {
 
         for (int i = num * interval; i < pageCollection.size() && i < ((num + 1) * interval); i++) {

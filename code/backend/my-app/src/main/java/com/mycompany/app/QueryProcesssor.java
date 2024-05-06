@@ -2,12 +2,10 @@ package com.mycompany.app;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mycompany.app.Service.QPService;
+import com.mycompany.app.Service.QueryProcessorService;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,9 +17,9 @@ import java.util.*;
 @RestController
 public class QueryProcesssor {
     
-    private QPService service;
+    private QueryProcessorService service;
 
-    public QueryProcesssor(QPService service){
+    public QueryProcesssor(QueryProcessorService service){
         this.service = service;
     }
 
