@@ -9,15 +9,21 @@ function ResultsPage (props)  {
     const [results,setResults]=useState([]);
     const queryParams = new URLSearchParams(props.location.search);
     const query = queryParams.get('q');
-      // const getResults = async () => {
-        // const response = await axios.get(`http://localhost:5000/search/${query}`);
-    //     console.log('Results:', response.data);
-    //     setResults(response.data);
-    // };
+    const getResults = async () => {
+        //const response = await axios.post(`http://localhost:5000/search/${query}`);
+        const response = await axios.post('http://localhost:5000/search', query, {
+            headers: {
+                'Content-Type': 'text/plain', // Specify the content type as text/plain for raw data
+            },
+        });
+        console.log('Results:', response.data);
+        setResults(response.data);
+    };
     useEffect(() => {
         const startTime=new Date().getUTCMilliseconds();
-        // getResults();
-        if(query==='Multithreaded'){
+        alert(query);
+        getResults();
+        /* //if(query==='Multithreaded'){
             setResults([
                 {
                     title: 'Crowler',
@@ -32,7 +38,7 @@ function ResultsPage (props)  {
                     snippet: 'Welcome to our network project! This Multithreaded allows users This application This application This application This application This application This application This application  to order technician services seamlessly.',
                 },
             ]);
-        }
+        } */
         const endTime=new Date().getUTCMilliseconds();
         setSearchTime((endTime-startTime)/1000);
     }, []);

@@ -11,14 +11,26 @@ function SearchBar({ onSuggest, onSubmit }) {
 
     const hootQuery = (e) => {
         e.preventDefault();
-        // axios.post(`http://localhost:5000/search/${query}`)
+        //axios.post(`http://localhost:5000/search/${query}`)
+        /* axios.post('http://localhost:5000/search', query, {
+            headers: {
+            'Content-Type': 'text/plain', // Specify the content type as text/plain for raw data
+            },
+        }) */
         history.push(`/search?q=${query}`);
     };
 
     const getSuggestions = async (query) => {
-        // const response = await axios.get(`http://localhost:5000/suggest/${query}`);
-        // return response.data;
-        return ["suggestion1", "suggestion2", "suggestion3"]; // Example suggestions
+        //const response = await axios.get(`http://localhost:5000/suggest/${query}`);
+        alert(query);
+        /* const response = await axios.post('http://localhost:5000/suggest', query, {
+            headers: {
+            'Content-Type': 'text/plain', // Specify the content type as text/plain for raw data
+            },
+        }); */
+        //console.log(response.data);
+        //return response.data;
+        //return ["suggestion1", "suggestion2", "suggestion3"]; // Example suggestions
     };
 
     const makeSuggestions = (e) => {
