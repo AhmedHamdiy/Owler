@@ -2,8 +2,8 @@ import React, { Fragment, useState } from "react";
 import { useHistory } from 'react-router-dom';
 import voiceSearchIcon from '../Styles/voiceSearch.png';
 import searchIcon from "../Styles/search.png";
-// import axios from 'axios';
-function SearchBar({ onSuggest, onSubmit }) {
+
+function SearchBar({ onSuggest }) {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestion, setShowSuggestion] = useState(false);
@@ -11,26 +11,21 @@ function SearchBar({ onSuggest, onSubmit }) {
 
     const hootQuery = (e) => {
         e.preventDefault();
-        //axios.post(`http://localhost:5000/search/${query}`)
-        /* axios.post('http://localhost:5000/search', query, {
-            headers: {
-            'Content-Type': 'text/plain', // Specify the content type as text/plain for raw data
-            },
-        }) */
         history.push(`/search?q=${query}`);
     };
 
     const getSuggestions = async (query) => {
-        //const response = await axios.get(`http://localhost:5000/suggest/${query}`);
-        alert(query);
-        /* const response = await axios.post('http://localhost:5000/suggest', query, {
-            headers: {
-            'Content-Type': 'text/plain', // Specify the content type as text/plain for raw data
-            },
-        }); */
-        //console.log(response.data);
-        //return response.data;
-        //return ["suggestion1", "suggestion2", "suggestion3"]; // Example suggestions
+        try {
+            const response = await fetch(`http://localhost:5000/suggest/${query}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            return [];
+        }
     };
 
     const makeSuggestions = (e) => {
@@ -60,6 +55,7 @@ function SearchBar({ onSuggest, onSubmit }) {
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
             setQuery(transcript);
+            onSuggest({ target: { value: transcript } });
             makeSuggestions({ target: { value: transcript } });
         };
         recognition.start();
