@@ -36,6 +36,7 @@ public class QueryProcessorService {
     }
 
     public List<Document> search(@RequestBody String query) {
+        System.out.println("SEARCHING! query = " + query);
         String processedQuery = query.toLowerCase().trim();
         updateQueryHistory(processedQuery);
 
@@ -242,6 +243,7 @@ public class QueryProcessorService {
     }
 
     public List<String> getSuggestions(String query) {
+        System.out.println("GEtting suggesstions query: " + query);
         MongoCursor<Document> cursor = mongoDB.getQueryHistoryCursor();
         List<Document> suggestionDocs = new ArrayList<>();
         List<String> suggestions = new ArrayList<>();

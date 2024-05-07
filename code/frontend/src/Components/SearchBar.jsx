@@ -16,7 +16,17 @@ function SearchBar({ onSuggest }) {
 
     const getSuggestions = async (query) => {
         try {
-            const response = await fetch(`http://localhost:5000/suggest/${query}`);
+            //const response = await fetch(`http://localhost:5000/suggest/${query}`);
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'text/plain' // Specify the content type as plain text
+                },
+                body: query // Set the plain text data as the body of the request
+            };
+
+            const response = await fetch("http://localhost:5000/suggest", requestOptions);
+
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
