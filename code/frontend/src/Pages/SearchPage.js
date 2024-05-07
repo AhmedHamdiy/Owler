@@ -31,7 +31,7 @@ const styles = {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "start",
-        height: "95vh",
+        height: "105vh",
         gap: "10px",
         paddingTop: "5vh"
     },

@@ -7,8 +7,8 @@ function SearchResults ({results,query})  {
         <div style={styles.resultsContainer}>
         {results.slice(currentPage * MAX_RESULTS_PER_PAGE, (currentPage + 1) * MAX_RESULTS_PER_PAGE)
             .map((result, index) => (<SearchResult key={index} 
-                title={result.title} link={result.link} snippet={result.snippet} 
-                query={query} icon={result.icon}/>
+                title={result.Title} link={result.URL} snippet={result.Snippet} 
+                query={query} icon={result.Logo}/>
             ))}
         <div style={styles.pagination}>
             <button style={styles.previousPage} onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 0}>Previous</button>

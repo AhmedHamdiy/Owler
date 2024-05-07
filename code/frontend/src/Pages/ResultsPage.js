@@ -11,10 +11,9 @@ function ResultsPage(props) {
     const query = queryParams.get('q');
 
     useEffect(() => {
-        const startTime = new Date().getUTCMilliseconds();
+        const startTime = performance.now();
         const fetchData = async () => {
             try {
-                //const response = await fetch(`http://localhost:5000/search/${query}`);
                 const requestOptions = {
                     method: 'POST',
                     headers: {
@@ -25,7 +24,6 @@ function ResultsPage(props) {
     
                 const response = await fetch("http://localhost:5000/search", requestOptions);
                 
-
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -34,7 +32,7 @@ function ResultsPage(props) {
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
-            const endTime = new Date().getUTCMilliseconds();
+            const endTime = performance.now();
             setSearchTime((endTime - startTime) / 1000);
         };
         
@@ -46,8 +44,8 @@ function ResultsPage(props) {
         <div style={styles.resultsPageContainer}>
             <nav style={styles.nav}>
                 <img src={Owl} alt="Owl" style={styles.owlImg} />
-                <SearchBar />
             </nav>
+                <SearchBar onSuggest={console.log(query)} />
             <h1 style={styles.heading3}>search time = {searchTime} seconds</h1>
             {results.length === 0 ? <NotFound /> : <SearchResults results={results} query={query} />}
         </div>
