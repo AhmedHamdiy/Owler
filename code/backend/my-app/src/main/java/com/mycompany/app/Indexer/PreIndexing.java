@@ -18,10 +18,6 @@ package com.mycompany.app.Indexer;
 import com.mycompany.app.Service.Pair;
 import com.mycompany.app.Service.ProcessingWords;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

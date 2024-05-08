@@ -2,7 +2,6 @@ package com.mycompany.app.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +28,7 @@ public class QueryProcessor {
     private MongoDB mongoDB;
     private Ranker ranker;
     private PorterStemmer stemmer = new PorterStemmer();
+    private static final int interval = 10;
 
     public QueryProcessor(MongoDB mongoDB, Ranker ranker) {
         this.mongoDB = mongoDB;
@@ -88,8 +88,9 @@ public class QueryProcessor {
 
         List<Map.Entry<ObjectId, Double>> list = new ArrayList<>(map.entrySet());
         List<Document> searchResult = new ArrayList<>();
+        List<Thread> threadList = new ArrayList<>();
 
-        for (Map.Entry<ObjectId, Double> entry : list) {
+        /* for (Map.Entry<ObjectId, Double> entry : list) {
             Document fullPageDoc = mongoDB.findPageById(entry.getKey());
             String HTMLContent = fullPageDoc.getString("HTML");
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
@@ -100,17 +101,34 @@ public class QueryProcessor {
                     .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
 
             searchResult.add(resDoc);
+        } */
+
+        int threadNum = 0;
+        for(int i = 0; i < list.size(); i = i + interval) {
+            Thread thread = new searchResultWizard(threadNum, interval, stemmedQueryWords, searchResult, list);
+            thread.setName("Search Wizard #" + threadNum);
+            thread.start();
+            threadList.add(thread);
+            threadNum++;
+        }
+
+        for(Thread thread : threadList) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread " + thread.getName() + " is done.");
         }
 
         ranker.sortPages(searchResult);
         return searchResult;
     }
 
-    String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
+    /*String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
         Elements elements = parsedDocument.select("p");
 
         for (Element element : elements) {
-
             String text = element.ownText();
             String lowerCaseText = text.toLowerCase();
 
@@ -125,11 +143,10 @@ public class QueryProcessor {
             }
         }
         return "";
-    }
+    }*/
 
     private String makeSnippetWordsBold(String snippet, String[] queryWordsArray) {
         String[] snippetWords = snippet.split("\\s+");
-        List<Integer> indicesToInsertAt = new ArrayList<>();
         List<String> queryWords = new ArrayList<>();
 
         for (String word : queryWordsArray) {
@@ -142,14 +159,14 @@ public class QueryProcessor {
 
         for (String snippetWord : snippetWords) {
             makeBold = false;
-            for (String queryWord : queryWords) { // this loop is not right
-                if (snippetWord.equalsIgnoreCase(queryWord)) {
+            for (String queryWord : queryWords) { 
+                if (snippetWord.equalsIgnoreCase(queryWord) || snippetWord.contains(queryWord)) {
                     makeBold = true;
                     break;
                 }
             }
             if (makeBold)
-                snippetBuilder.append(" <b> ");
+                snippetBuilder.append("<b> ");
             snippetBuilder.append(snippetWord).append(" ");
             if(makeBold)
                 snippetBuilder.append("</b> ");
@@ -237,29 +254,93 @@ public class QueryProcessor {
             Document page = mongoDB.findPageById(pageID);
             String HTMLContent = page.getString("HTML");
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-            //Elements elements = parsedDocument.select("*");
             // String logoURL = extractLogo(parsedDocument);
             Elements elements = parsedDocument.select("p");
 
             for (Element element : elements) {
-
-                /* String tagName = element.tagName();
-                if (tagName.equals("a") || tagName.equals("img")
-                        || tagName.equals("br") || tagName.equals("hr")
-                        || tagName.equals("input") || tagName.equals("button"))
-                    continue; */
 
                 String text = element.ownText();
                 String lowerCaseText = text.toLowerCase();
                 if (lowerCaseText.contains(query)) {
                     searchResult
                             .add(new Document("URL", page.getString("Link")).append("Title", page.getString("Title"))
-                                    .append("Snippet", text).append("Rank", page.getDouble("PageRank")));
+                                    .append("Snippet", makePhraseSnippetBold(text, query)).append("Rank", page.getDouble("PageRank")));
                     break;
                 }
             }
         }
         ranker.sortPages(searchResult);
         return searchResult;
+    }
+
+    public String makePhraseSnippetBold(String snippet, String query) {
+        StringBuilder snippetBuilder = new StringBuilder();
+        for (int i = 0; i + query.length() < snippet.length(); i++) {
+            if(snippet.substring(i, i + query.length()).equalsIgnoreCase(query)) {
+                snippetBuilder.append(snippet.substring(0, i));
+                snippetBuilder.append(" <b> ");
+                snippetBuilder.append(snippet.substring(i, i + query.length()));
+                snippetBuilder.append(" </b> ");
+                snippetBuilder.append(snippet.substring(i + query.length(), snippet.length())); 
+            }
+        }
+        return snippetBuilder.toString();
+    }
+
+    class searchResultWizard extends Thread {
+        private int num;
+        private int interval;
+        List<Map.Entry<ObjectId, Double>> pageList;
+        String[] stemmedQueryWords;
+        List<Document> searchResult;
+
+        public searchResultWizard(int num, int interval, String[] stemmedQueryWords, List<Document> searchResult, 
+        List<Map.Entry<ObjectId, Double>> pageList) {
+            this.num = num;
+            this.interval = interval;
+            this.stemmedQueryWords = stemmedQueryWords;
+            this.searchResult = searchResult;
+            this.pageList = pageList;
+        }
+
+        public void run() {
+            for (int i = num * interval; i < pageList.size() && i < ((num + 1) * interval); i++) {
+                Document fullPageDoc;
+                synchronized(mongoDB) {
+                    fullPageDoc = mongoDB.findPageById(pageList.get(i).getKey());
+                }
+                String HTMLContent = fullPageDoc.getString("HTML");
+                org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
+                Double finalRank = pageList.get(i).getValue() + fullPageDoc.getDouble("PageRank");
+                String snippet = getSnippet(parsedDocument, stemmedQueryWords);
+                // logo
+                Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
+                    .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
+
+                synchronized(searchResult) {
+                    searchResult.add(resDoc);
+                }
+            } 
+        }    
+
+        String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
+            Elements elements = parsedDocument.select("p");
+    
+            for (Element element : elements) {
+                String text = element.ownText();
+                String lowerCaseText = text.toLowerCase();
+    
+                for (String queryWord : queryWords) {
+                    if (ProcessingWords.isStopWord(queryWord))
+                        continue;
+    
+                    if (lowerCaseText.contains(queryWord)) {
+                        // return text;
+                        return makeSnippetWordsBold(text, queryWords);
+                    }
+                }
+            }
+            return "";
+        }
     }
 }
