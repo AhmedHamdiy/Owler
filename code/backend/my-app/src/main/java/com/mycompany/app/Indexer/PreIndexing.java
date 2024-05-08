@@ -15,6 +15,7 @@ check if the page not indexed befor :
 
 package com.mycompany.app.Indexer;
 
+import com.mycompany.app.Service.Pair;
 import com.mycompany.app.Service.ProcessingWords;
 
 import java.io.IOException;
@@ -33,7 +34,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import com.mycompany.app.MongoDB;
-import com.mycompany.app.Pair;
 
 import opennlp.tools.stemmer.PorterStemmer;
 

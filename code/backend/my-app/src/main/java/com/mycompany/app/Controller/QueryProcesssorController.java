@@ -1,8 +1,8 @@
-package com.mycompany.app;
+package com.mycompany.app.Controller;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mycompany.app.Service.QueryProcessorService;
+import com.mycompany.app.Service.QueryProcessor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,11 +16,11 @@ import org.bson.Document;
 import java.util.*;
 
 @RestController
-public class QueryProcesssor {
+public class QueryProcesssorController {
     
-    private QueryProcessorService service;
+    private QueryProcessor service;
 
-    public QueryProcesssor(QueryProcessorService service){
+    public QueryProcesssorController(QueryProcessor service){
         this.service = service;
     }
 
@@ -33,7 +33,6 @@ public class QueryProcesssor {
     @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/suggest")
     public ResponseEntity<List<String>> getSuggestions(@RequestBody String query) {
-        return new ResponseEntity<List<String>>(service.getSuggestions(query), HttpStatus.OK);
+        return new ResponseEntity<>(service.getSuggestions(query), HttpStatus.OK);
     }
-    
 }
