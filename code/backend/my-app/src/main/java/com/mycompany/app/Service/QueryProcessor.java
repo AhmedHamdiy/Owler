@@ -41,7 +41,7 @@ public class QueryProcessor {
         String halfProcessedQuery = query.toLowerCase().trim();
         updateQueryHistory(halfProcessedQuery);
 
-        // Look for phrases  first
+        // Look for phrases first
         if (query.charAt(0) == '\"') {
             String phrase;
             int i = 1;
@@ -95,8 +95,7 @@ public class QueryProcessor {
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
             Double finalRank = entry.getValue() + fullPageDoc.getDouble("PageRank");
             String snippet = getSnippet(parsedDocument, stemmedQueryWords);
-            //snippet = makeSnippetWordsBold(snippet, stemmedQueryWords);
-            //String logoURL = extractLogo(parsedDocument);
+            // String logoURL = extractLogo(parsedDocument);
             Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
                     .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
 
@@ -109,85 +108,53 @@ public class QueryProcessor {
 
     String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
         Elements elements = parsedDocument.select("p");
-        StringBuilder snippetBuilder = new StringBuilder();
-        int paragraphCount = 0;
 
         for (Element element : elements) {
-           if (paragraphCount >= 1)
-                break;
 
-            String tagName = element.tagName();
             String text = element.ownText();
             String lowerCaseText = text.toLowerCase();
 
             for (String queryWord : queryWords) {
-                if (paragraphCount >= 1)
-                    break;
-
                 if (ProcessingWords.isStopWord(queryWord))
                     continue;
 
                 if (lowerCaseText.contains(queryWord)) {
-
-                    if (paragraphCount >=   1)
-                        continue;
-
-                    snippetBuilder.append(text);
-                    snippetBuilder.append(" <br> ");
-
-                    paragraphCount++;
+                    // return text;
+                    return makeSnippetWordsBold(text, queryWords);
                 }
             }
         }
-        //return snippetBuilder.toString().trim();
-        return makeSnippetWordsBold(snippetBuilder.toString().trim(), queryWords);
+        return "";
     }
 
-    private String makeSnippetWordsBold(String snippet, String[] queryWords) {
+    private String makeSnippetWordsBold(String snippet, String[] queryWordsArray) {
         String[] snippetWords = snippet.split("\\s+");
         List<Integer> indicesToInsertAt = new ArrayList<>();
-        String resultSnippet;
+        List<String> queryWords = new ArrayList<>();
 
-        for (String queryWord : queryWords) {
-            if (ProcessingWords.isStopWord(queryWord))
-                continue;
-
-            for (int i = 0; i < snippetWords.length; i++) {
-                if (snippetWords[i].equalsIgnoreCase(queryWord)) {
-                    indicesToInsertAt.add(i);
-                }
-            }
+        for (String word : queryWordsArray) {
+            if (!ProcessingWords.isStopWord(word))
+                queryWords.add(word);
         }
 
-        indicesToInsertAt.sort(null);
-        //Collections.sort(indicesToInsertAt);
+        StringBuilder snippetBuilder = new StringBuilder();
+        boolean makeBold;
 
-        if (!indicesToInsertAt.isEmpty()) {
-            StringBuilder snippetBuilder = new StringBuilder();
-            
-            int j = 0;
-            for (int i = 0; i < snippetWords.length && j < indicesToInsertAt.size(); i++) {
-                int index = indicesToInsertAt.get(j);
-                
-                if (i == index)
-                    snippetBuilder.append(" <b> ");
-
-                snippetBuilder.append(snippetWords[i]).append(" ");
-                
-                if (i == index) {
-                    snippetBuilder.append("</b> ");
-                    j++;
+        for (String snippetWord : snippetWords) {
+            makeBold = false;
+            for (String queryWord : queryWords) { // this loop is not right
+                if (snippetWord.equalsIgnoreCase(queryWord)) {
+                    makeBold = true;
+                    break;
                 }
-
-                if (j >= indicesToInsertAt.size())
-                    while( i < snippetWords.length)
-                        snippetBuilder.append(snippetWords[i]).append(" ");
             }
-            resultSnippet = snippetBuilder.toString();
-        } else 
-            return snippet;
-
-        return resultSnippet;
+            if (makeBold)
+                snippetBuilder.append(" <b> ");
+            snippetBuilder.append(snippetWord).append(" ");
+            if(makeBold)
+                snippetBuilder.append("</b> ");
+        }
+        return snippetBuilder.toString().trim();
     }
 
     private String extractLogo(org.jsoup.nodes.Document page) {
@@ -270,16 +237,17 @@ public class QueryProcessor {
             Document page = mongoDB.findPageById(pageID);
             String HTMLContent = page.getString("HTML");
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-            Elements elements = parsedDocument.select("*");
-            //String logoURL = extractLogo(parsedDocument);
+            //Elements elements = parsedDocument.select("*");
+            // String logoURL = extractLogo(parsedDocument);
+            Elements elements = parsedDocument.select("p");
 
             for (Element element : elements) {
 
-                String tagName = element.tagName();
+                /* String tagName = element.tagName();
                 if (tagName.equals("a") || tagName.equals("img")
                         || tagName.equals("br") || tagName.equals("hr")
                         || tagName.equals("input") || tagName.equals("button"))
-                    continue;
+                    continue; */
 
                 String text = element.ownText();
                 String lowerCaseText = text.toLowerCase();
