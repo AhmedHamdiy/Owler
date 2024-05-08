@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -24,12 +25,12 @@ import com.mycompany.app.Ranker.Ranker;
 import opennlp.tools.stemmer.PorterStemmer;
 
 @Service
-public class QueryProcessorService {
+public class QueryProcessor {
     private MongoDB mongoDB;
     private Ranker ranker;
     private PorterStemmer stemmer = new PorterStemmer();
 
-    public QueryProcessorService(MongoDB mongoDB, Ranker ranker) {
+    public QueryProcessor(MongoDB mongoDB, Ranker ranker) {
         this.mongoDB = mongoDB;
         this.ranker = ranker;
         mongoDB.initializeDatabaseConnection();
@@ -37,21 +38,21 @@ public class QueryProcessorService {
 
     public List<Document> search(@RequestBody String query) {
         System.out.println("SEARCHING! query = " + query);
-        String processedQuery = query.toLowerCase().trim();
-        updateQueryHistory(processedQuery);
+        String halfProcessedQuery = query.toLowerCase().trim();
+        updateQueryHistory(halfProcessedQuery);
 
-        // Look for phrase searching first
+        // Look for phrases  first
         if (query.charAt(0) == '\"') {
             String phrase;
             int i = 1;
             while (query.charAt(i) != '\"')
                 i++;
 
-            phrase = query.substring(1, i - 1);
+            phrase = query.substring(1, i);
             return searchPhrase(phrase);
         }
 
-        String[] queryWords = processedQuery.split("\\s+");
+        String[] queryWords = halfProcessedQuery.split("\\s+");
         String[] stemmedQueryWords = Arrays.copyOf(queryWords, queryWords.length);
         HashMap<ObjectId, Double> map = new HashMap<ObjectId, Double>();
 
@@ -94,11 +95,10 @@ public class QueryProcessorService {
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
             Double finalRank = entry.getValue() + fullPageDoc.getDouble("PageRank");
             String snippet = getSnippet(parsedDocument, stemmedQueryWords);
-            snippet = makeSnippetWordsBold(snippet, stemmedQueryWords);
-            String logoURL = extractLogo(parsedDocument);
+            //snippet = makeSnippetWordsBold(snippet, stemmedQueryWords);
+            //String logoURL = extractLogo(parsedDocument);
             Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
-                    .append("Title", fullPageDoc.getString("Title")).append("Logo", logoURL)
-                    .append("Snippet", snippet);
+                    .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
 
             searchResult.add(resDoc);
         }
@@ -108,53 +108,39 @@ public class QueryProcessorService {
     }
 
     String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
-        // String HTMLContent = page.getString("HTML");
-        // org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-        Elements elements = parsedDocument.select("*");
+        Elements elements = parsedDocument.select("p");
         StringBuilder snippetBuilder = new StringBuilder();
-        int headerCount = 0;
         int paragraphCount = 0;
-        int otherElementCount = 0;
 
         for (Element element : elements) {
+           if (paragraphCount >= 1)
+                break;
 
             String tagName = element.tagName();
-            if (tagName.equals("a") || tagName.equals("img")
-                    || tagName.equals("br") || tagName.equals("hr")
-                    || tagName.equals("input") || tagName.equals("button")
-                    || tagName.equals("h1"))
-                continue;
-
             String text = element.ownText();
             String lowerCaseText = text.toLowerCase();
 
             for (String queryWord : queryWords) {
+                if (paragraphCount >= 1)
+                    break;
 
                 if (ProcessingWords.isStopWord(queryWord))
                     continue;
 
                 if (lowerCaseText.contains(queryWord)) {
-                    // perform checks
-                    if (tagName.contains("h") && headerCount > 2)
-                        continue;
-                    else if (tagName.equals("p") && paragraphCount > 0)
-                        continue;
-                    else if (!tagName.contains("h") && !tagName.equals("p") && (otherElementCount > 1 || paragraphCount > 0))
+
+                    if (paragraphCount >=   1)
                         continue;
 
                     snippetBuilder.append(text);
                     snippetBuilder.append(" <br> ");
 
-                    if (tagName.contains("h"))
-                        headerCount++;
-                    else if (tagName.equals("p"))
-                        paragraphCount++;
-                    else
-                        otherElementCount++;
+                    paragraphCount++;
                 }
             }
         }
-        return snippetBuilder.toString().trim();
+        //return snippetBuilder.toString().trim();
+        return makeSnippetWordsBold(snippetBuilder.toString().trim(), queryWords);
     }
 
     private String makeSnippetWordsBold(String snippet, String[] queryWords) {
@@ -174,7 +160,7 @@ public class QueryProcessorService {
         }
 
         indicesToInsertAt.sort(null);
-        Collections.sort(indicesToInsertAt);
+        //Collections.sort(indicesToInsertAt);
 
         if (!indicesToInsertAt.isEmpty()) {
             StringBuilder snippetBuilder = new StringBuilder();
@@ -189,9 +175,13 @@ public class QueryProcessorService {
                 snippetBuilder.append(snippetWords[i]).append(" ");
                 
                 if (i == index) {
-                    snippetBuilder.append(" </b> ");
+                    snippetBuilder.append("</b> ");
                     j++;
                 }
+
+                if (j >= indicesToInsertAt.size())
+                    while( i < snippetWords.length)
+                        snippetBuilder.append(snippetWords[i]).append(" ");
             }
             resultSnippet = snippetBuilder.toString();
         } else 
@@ -244,7 +234,7 @@ public class QueryProcessorService {
 
     public List<String> getSuggestions(String query) {
         System.out.println("GEtting suggesstions query: " + query);
-        MongoCursor<Document> cursor = mongoDB.getQueryHistoryCursor();
+        MongoCursor<Document> cursor = mongoDB.getQueryHistory();
         List<Document> suggestionDocs = new ArrayList<>();
         List<String> suggestions = new ArrayList<>();
 
@@ -273,17 +263,15 @@ public class QueryProcessorService {
     }
 
     public List<Document> searchPhrase(String query) {
-        System.out.println("Searching for phrase");
-        query = query.toLowerCase();
-        List<Document> crawledPages = mongoDB.getCrawlerPages();
+        Set<ObjectId> foundPages = mongoDB.searchPhrase(query);
         List<Document> searchResult = new ArrayList<>();
-        updateQueryHistory(query.trim());
 
-        for (Document page : crawledPages) {
+        for (ObjectId pageID : foundPages) {
+            Document page = mongoDB.findPageById(pageID);
             String HTMLContent = page.getString("HTML");
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
             Elements elements = parsedDocument.select("*");
-            String logoURL = extractLogo(parsedDocument);
+            //String logoURL = extractLogo(parsedDocument);
 
             for (Element element : elements) {
 
@@ -298,12 +286,12 @@ public class QueryProcessorService {
                 if (lowerCaseText.contains(query)) {
                     searchResult
                             .add(new Document("URL", page.getString("Link")).append("Title", page.getString("Title"))
-                                    .append("Logo", logoURL).append("Snippet", text));
-
+                                    .append("Snippet", text).append("Rank", page.getDouble("PageRank")));
                     break;
                 }
             }
         }
+        ranker.sortPages(searchResult);
         return searchResult;
     }
 }

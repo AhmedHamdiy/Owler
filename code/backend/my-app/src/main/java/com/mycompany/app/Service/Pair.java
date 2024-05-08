@@ -1,4 +1,4 @@
-package com.mycompany.app;
+package com.mycompany.app.Service;
 
 public class Pair<K, V> {
     public K key;

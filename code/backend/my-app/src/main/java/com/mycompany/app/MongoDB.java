@@ -19,6 +19,9 @@ import org.bson.types.ObjectId;
 
 import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
+import com.mycompany.app.Service.ProcessingWords;
+
+import opennlp.tools.stemmer.PorterStemmer;
 
 import static com.mongodb.client.model.Filters.eq;
 
@@ -61,6 +64,7 @@ public class MongoDB {
     public MongoCollection<Document> queryHistoryCollection;
     public MongoCollection<Document> visitedCollection;
     public MongoCollection<Document> toVisitCollection;
+    public PorterStemmer stemmer = new PorterStemmer();
 
     public void initializeDatabaseConnection() {
         mongoClient = MongoClients.create();
@@ -205,7 +209,7 @@ public class MongoDB {
 
     public void closeConnection() {
         mongoClient.close();
-        System.out.println("Connection with mongoDB is closed");
+        System.out.println("Connection with MongoDB is closed");
     }
 
     public boolean containsWord(String word) {
@@ -259,42 +263,48 @@ public class MongoDB {
         return result;
     }
 
-    /* public Set<String> searchPhrase(String phrase) {
-        String[] words = phrase.split("\\s+");
-        Set<String> commonLinks = new HashSet<>();
-        List<String> returnedLinks = new ArrayList<>();
-        for (String st : words) {
-            returnedLinks = getPages(st);
-            if (commonLinks.isEmpty()) {
-                commonLinks.addAll(returnedLinks);
+    public Set<ObjectId> searchPhrase(String phrase) {
+        String[] queryWords = phrase.split("\\s+");
+        for (String string : queryWords) {
+            
+            System.out.println(string);
+        }
+        Set<ObjectId> commonPages = new HashSet<>();
+        List<ObjectId> returnedPages = new ArrayList<>();
+
+        for (String queryWord : queryWords) {   
+            if(ProcessingWords.isStopWord(queryWord))
+                continue;
+            queryWord = stemmer.stem(queryWord);
+            returnedPages = getPagesByWord(queryWord);
+
+            if (returnedPages == null)
+                continue;
+            if (commonPages.isEmpty()) {
+                commonPages.addAll(returnedPages);
             } else {
-                commonLinks.retainAll(new HashSet<>(returnedLinks));
+                commonPages.retainAll(new HashSet<>(returnedPages));
             }
         }
-        return commonLinks;
-    } */
+        return commonPages;
+    }
 
-    /**
-     * returns a list of links to pages that contain a given word
-     * 
-     * @param word your search term
-     * @return list of strings -> the URL of each page that contains a reference to
-     *         said word
-     */
-    // MIGHT NEED TO EDIT THIS TO COMPLY WITH CURRENT SCHEMA!
-    public List<String> getPages(String word) {
-        List<String> pages = new ArrayList<>();
+    public List<ObjectId> getPagesByWord(String word) {
+        List<ObjectId> pagesHavingWord = new ArrayList<>();
         FindIterable<Document> pageDocs;
         Bson filter = Filters.eq("Word", word);
-        Bson projection = fields(include("Pages.Link"), excludeId());
+        Bson projection = fields(include("Pages._id"), excludeId());
         pageDocs = wordCollection.find(filter).projection(projection);
 
-        List<Document> linkDocs = (List<Document>) (pageDocs.first().get("Pages"));
+        List<Document> pageArray = (List<Document>) (pageDocs.first().get("Pages"));
 
-        for (Document doc2 : linkDocs) {
-            pages.add(doc2.get("Link", String.class));
+        if (pageArray == null)
+            return null;
+
+        for (Document doc : pageArray) {
+            pagesHavingWord.add(doc.getObjectId("_id"));
         }
-        return pages;
+        return pagesHavingWord;
     }
 
     /**
@@ -375,7 +385,7 @@ public class MongoDB {
         return queryHistoryCollection.updateOne(filter, update).getModifiedCount();
     }
 
-    public MongoCursor<Document> getQueryHistoryCursor() {
+    public MongoCursor<Document> getQueryHistory() {
         return queryHistoryCollection.find().iterator();
     }
 }
