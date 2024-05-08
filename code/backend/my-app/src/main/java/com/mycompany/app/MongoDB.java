@@ -37,6 +37,8 @@ import org.bson.BsonObjectId;
 import org.bson.conversions.Bson;
 
 import java.io.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.mongodb.client.model.Updates.set;
 import static java.lang.Math.log;
@@ -148,9 +150,23 @@ public class MongoDB {
 
     public Set<String> getVisitedPages() {
         Set<String> visited = new HashSet<String>();
-        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
+        visitedCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
                 .into(visited);
         return visited.isEmpty() ? null : visited;
+    }
+
+    public Set<String> getCompactStrings() {
+        Set<String> compactStrings = new HashSet<String>();
+        pageCollection.find().projection(Projections.include("compactString")).map(document -> document.getString("compactString"))
+                .into(compactStrings);
+        return compactStrings;
+    }
+
+    public BlockingQueue<String> getPendingPages() {
+        BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
+        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
+                .into(pendingPages);
+        return pendingPages;
     }
 
     public int checkVisitedThreshold() {

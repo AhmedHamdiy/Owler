@@ -7,9 +7,10 @@ import org.jsoup.select.Elements;
 
 import com.mycompany.app.MongoDB;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.BlockingQueue;
@@ -17,7 +18,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.*;
 
 public class CrawlerOwl implements Runnable {
-    private static final int MAX_NUMBER_PAGES = 10000;
+    private static final int MAX_NUMBER_PAGES = 50;
     static MongoDB mongodb = new MongoDB();
     // We use HashMap to store the blocked URLs for every website by reading
     // robot.txt.
@@ -29,10 +30,29 @@ public class CrawlerOwl implements Runnable {
     // the pages we want to visit.
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<String>();
 
-    public CrawlerOwl(Set<String> visited, BlockingQueue<String> pendings) {
+    private Set<String> compactStrings = new HashSet<String>();
+
+
+    public CrawlerOwl(Set<String> visited, BlockingQueue<String> pendings, Set<String> compact) {
         visitedPages = visited;
         pendingPages = pendings;
+        compactStrings = compact;
         mongodb.initializeDatabaseConnection();
+    }
+
+    public byte[] getSHA(String str) throws NoSuchAlgorithmException {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        messageDigest.update(str.getBytes());
+        return messageDigest.digest();
+    }
+
+    public String cryptographic(String html) throws NoSuchAlgorithmException, IOException {
+        byte[] hash = getSHA(html);
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hash) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     public void run() {
@@ -132,19 +152,25 @@ public class CrawlerOwl implements Runnable {
             myConnection.referrer("http://www.google.com");
             org.jsoup.nodes.Document doc = myConnection.get();
             if (myConnection.response().statusCode() == 200) { // Check if the URL is allowed to be crawled
-                String HTMLPage = doc.toString(); // Parsing the HTML page into a string
+                String HTMLPage = doc.toString();
+                String compactString = cryptographic(HTMLPage);
                 String title = doc.title();
                 insertVisited(url);
-
-                mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
-                        .append("HTML", HTMLPage)
-                        .append("isIndexed", false), "Page");
-                return doc;
+                if (!compactStrings.contains(compactString)) {
+                    compactStrings.add(compactString);
+                    mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
+                            .append("HTML", HTMLPage).append("compactString", compactString)
+                            .append("isIndexed", false), "Page");
+                    return doc;
+                }
+                return null;
             } else
                 return null;
         } catch (IOException e) {
             System.err.println("Error: error in visiting the page..");
             return null;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
     }
 
