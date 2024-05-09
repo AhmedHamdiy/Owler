@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,7 +14,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,21 +37,201 @@ public class QueryProcessor {
         mongoDB.initializeDatabaseConnection();
     }
 
+    public List<Document> readLogicalExpression(String query) {
+        int i = 0;
+        char next;
+        Operation first = Operation.NULL;
+        Operation second = Operation.NULL;
+        List<String> phraseList = new ArrayList<>();
+
+        while (i < query.length()) {
+            next = query.charAt(i);
+
+            if (next == '\"') {
+                int phraseLength = readPhrase(phraseList, query, i);
+                i += phraseLength + 1;
+            } else if (next == 'a') {
+                if (first == Operation.NULL)
+                    first = Operation.AND;
+                else
+                    second = Operation.AND;
+                i += 3;
+            } else if (next == 'o') {
+                if (first == Operation.NULL)
+                    first = Operation.OR;
+                else
+                    second = Operation.OR;
+                i += 2;
+            } else if (next == 'n') {
+                if (first == Operation.NULL)
+                    first = Operation.NOT;
+                else
+                    second = Operation.NOT;
+                i += 3;
+            }
+            i++;
+        }
+
+        return executeLogicalExpression(phraseList, first, second);
+    }
+
+    public List<Document> executeLogicalExpression(List<String> phraseList, Operation first, Operation second) {
+        Set<ObjectId> resultPagesIndex = new HashSet<>();
+        if (phraseList.size() == 1) {
+            return searchByPhrase(phraseList.get(0), resultPagesIndex);
+        }
+        List<Document> searchResult = new ArrayList<>();
+
+        if (first == Operation.NOT) {
+            first = second;
+            second = Operation.NOT;
+            String firstPhrase = phraseList.remove(0);
+            phraseList.add(firstPhrase);
+        } else if (first == Operation.OR && second == Operation.AND) {
+            first = Operation.AND;
+            second = Operation.OR;
+            String firstPhrase = phraseList.remove(0);
+            String secondPhrase = phraseList.remove(0);
+            phraseList.add(secondPhrase);
+            phraseList.add(firstPhrase);
+        }
+
+        switch (first) {
+            case Operation.AND:
+                searchResult = executeAND(phraseList.get(0), phraseList.get(1), resultPagesIndex);
+                break;
+            case Operation.OR:
+                searchResult = executeOR(phraseList.get(0), phraseList.get(1), resultPagesIndex);
+                break;
+            default:
+                break;
+        }
+
+        switch (second) {
+            case Operation.AND:
+                Set<ObjectId> set = new HashSet<>();
+                List<Document> res1 = searchByPhrase(phraseList.get(2), set);
+                resultPagesIndex.retainAll(set);
+                List<Document> prevRes = new ArrayList<>(searchResult);
+                prevRes.addAll(res1);
+                searchResult.clear();
+
+                for (ObjectId pageID : resultPagesIndex) {
+                    for (Document resultPage : prevRes) {
+                        if (resultPage.getObjectId("_id") == pageID && !containsDocument(pageID, searchResult))
+                            searchResult.add(resultPage);
+                    }
+                }
+                break;
+            case Operation.OR:
+                List<Document> res2 = searchByPhrase(phraseList.get(2), resultPagesIndex);
+
+                for (ObjectId pageID : resultPagesIndex) {
+                    for (Document resultPage : res2) {
+                        if (resultPage.getObjectId("_id") == pageID && !containsDocument(pageID, searchResult))
+                            searchResult.add(resultPage);
+                    }
+                }
+                break;
+            case Operation.NOT:
+                filterResult(searchResult, phraseList.get(1));
+            default:
+                break;
+        }
+        return new ArrayList<>(searchResult);
+    }
+
+    private void filterResult(List<Document> searchResult, String notExpression) {
+        Iterator<Document> iterator = searchResult.iterator();
+
+        while (iterator.hasNext()) {
+            Document doc = iterator.next();
+
+            Document fullPageDoc = mongoDB.findPageById(doc.getObjectId("_id"));
+            String HTMLContent = fullPageDoc.getString("HTML");
+            org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
+
+            if (parsedDocument.text().contains(notExpression))
+                iterator.remove();
+        }
+    }
+
+    private enum Operation {
+        AND,
+        OR,
+        NOT,
+        NULL
+    }
+
+    private boolean containsDocument(ObjectId id, List<Document> docList) {
+        for (Document doc : docList) 
+            if (doc.getObjectId(docList) == id)
+                return true;
+        return false;
+    }
+   
+    private List<Document> executeOR(String phrase1, String phrase2, Set<ObjectId> resultsPageIndex) {
+        //Set<ObjectId> set1 = new HashSet<>();
+        //Set<ObjectId> set2 = new HashSet<>();
+        List<Document> result1 = searchByPhrase(phrase1, resultsPageIndex);
+        List<Document> result2 = searchByPhrase(phrase2, resultsPageIndex);
+
+        //set1.addAll(set2);
+        result1.addAll(result2);
+        List<Document> finalResult = new ArrayList<>();
+
+        for (ObjectId pageID : resultsPageIndex) {
+            for (Document resultPage : result1) {
+                if (resultPage.getObjectId("_id") == pageID)
+                    finalResult.add(resultPage);
+            }
+        }
+        return finalResult;
+    }
+
+    private List<Document> executeAND(String phrase1, String phrase2, Set<ObjectId> resultsPageIndex) {
+        Set<ObjectId> pageIdSet = new HashSet<>();
+        //Set<ObjectId> set2 = new HashSet<>();
+        List<Document> result1 = searchByPhrase(phrase1, resultsPageIndex);
+        List<Document> result2 = searchByPhrase(phrase2, pageIdSet);
+        /* System.out.println("result 1 size: " + result1.size());
+        System.out.println("result 2 size: " + result2.size()); */
+        resultsPageIndex.retainAll(pageIdSet);
+        result1.addAll(result2);
+        List<Document> finalResult = new ArrayList<>();
+
+        for (ObjectId pageID : resultsPageIndex) {
+            for (Document resultPage : result1) {
+                if (resultPage.getObjectId("_id") == pageID)
+                    finalResult.add(resultPage);
+            }
+        }
+        // System.out.println("result size: " + set1.size());
+        return finalResult;
+    }
+    
+    public int readPhrase(List<String> phraseList, String query, int i) {
+        i++;
+        int j = i;
+
+        while (query.charAt(i) != '\"')
+            i++;
+
+        String phrase = query.substring(j, i);
+        phraseList.add(phrase);
+
+        System.out.println("Read phrase:" + phrase + "!");
+
+        return phrase.length();
+    }
+
     public List<Document> search(@RequestBody String query) {
-        System.out.println("SEARCHING! query = " + query);
         String halfProcessedQuery = query.toLowerCase().trim();
         updateQueryHistory(halfProcessedQuery);
 
         // Look for phrases first
-        if (query.charAt(0) == '\"') {
-            String phrase;
-            int i = 1;
-            while (query.charAt(i) != '\"')
-                i++;
-
-            phrase = query.substring(1, i);
-            return searchPhrase(phrase);
-        }
+        if (query.charAt(0) == '\"') 
+            return readLogicalExpression(halfProcessedQuery);
 
         String[] queryWords = halfProcessedQuery.split("\\s+");
         String[] stemmedQueryWords = Arrays.copyOf(queryWords, queryWords.length);
@@ -65,7 +246,7 @@ public class QueryProcessor {
             if (ProcessingWords.isStopWord(stemmedQueryWord))
                 continue;
 
-            MongoCursor<Document> cursor = mongoDB.getWordPagesCursor(stemmedQueryWord);
+            MongoCursor<Document> cursor = mongoDB.getPagesInfoPerWord(stemmedQueryWord);
 
             while (cursor.hasNext()) {
                 Document doc = cursor.next();
@@ -89,22 +270,9 @@ public class QueryProcessor {
         List<Map.Entry<ObjectId, Double>> list = new ArrayList<>(map.entrySet());
         List<Document> searchResult = new ArrayList<>();
         List<Thread> threadList = new ArrayList<>();
-
-        /* for (Map.Entry<ObjectId, Double> entry : list) {
-            Document fullPageDoc = mongoDB.findPageById(entry.getKey());
-            String HTMLContent = fullPageDoc.getString("HTML");
-            org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-            Double finalRank = entry.getValue() + fullPageDoc.getDouble("PageRank");
-            String snippet = getSnippet(parsedDocument, stemmedQueryWords);
-            // String logoURL = extractLogo(parsedDocument);
-            Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
-                    .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
-
-            searchResult.add(resDoc);
-        } */
-
         int threadNum = 0;
-        for(int i = 0; i < list.size(); i = i + interval) {
+
+        for (int i = 0; i < list.size(); i = i + interval) {
             Thread thread = new searchResultWizard(threadNum, interval, stemmedQueryWords, searchResult, list);
             thread.setName("Search Wizard #" + threadNum);
             thread.start();
@@ -112,7 +280,7 @@ public class QueryProcessor {
             threadNum++;
         }
 
-        for(Thread thread : threadList) {
+        for (Thread thread : threadList) {
             try {
                 thread.join();
             } catch (InterruptedException e) {
@@ -123,90 +291,6 @@ public class QueryProcessor {
 
         ranker.sortPages(searchResult);
         return searchResult;
-    }
-
-    /*String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
-        Elements elements = parsedDocument.select("p");
-
-        for (Element element : elements) {
-            String text = element.ownText();
-            String lowerCaseText = text.toLowerCase();
-
-            for (String queryWord : queryWords) {
-                if (ProcessingWords.isStopWord(queryWord))
-                    continue;
-
-                if (lowerCaseText.contains(queryWord)) {
-                    // return text;
-                    return makeSnippetWordsBold(text, queryWords);
-                }
-            }
-        }
-        return "";
-    }*/
-
-    private String makeSnippetWordsBold(String snippet, String[] queryWordsArray) {
-        String[] snippetWords = snippet.split("\\s+");
-        List<String> queryWords = new ArrayList<>();
-
-        for (String word : queryWordsArray) {
-            if (!ProcessingWords.isStopWord(word))
-                queryWords.add(word);
-        }
-
-        StringBuilder snippetBuilder = new StringBuilder();
-        boolean makeBold;
-
-        for (String snippetWord : snippetWords) {
-            makeBold = false;
-            for (String queryWord : queryWords) { 
-                if (snippetWord.equalsIgnoreCase(queryWord) || snippetWord.contains(queryWord)) {
-                    makeBold = true;
-                    break;
-                }
-            }
-            if (makeBold)
-                snippetBuilder.append("<b> ");
-            snippetBuilder.append(snippetWord).append(" ");
-            if(makeBold)
-                snippetBuilder.append("</b> ");
-        }
-        return snippetBuilder.toString().trim();
-    }
-
-    private String extractLogo(org.jsoup.nodes.Document page) {
-        Elements imgTags = page.select("img");
-        for (Element img : imgTags) {
-            String imgUrl = img.attr("src");
-
-            if (isLikelyLogo(imgUrl))
-                return imgUrl;
-        }
-        return null;
-    }
-
-    private static boolean isLikelyLogo(String url) {
-        // might add more sophisticated logic here
-        return url.contains("logo") || url.contains("brand");
-    }
-
-    private static String extractText(Element element) {
-        StringBuilder text = new StringBuilder();
-        for (Node node : element.childNodes()) {
-            if (node instanceof Element) {
-                Element childElement = (Element) node;
-                if ("a".equalsIgnoreCase(childElement.tagName())) {
-                    // Handle <a> elements separately to include their text content in the correct
-                    // position
-                    // text.append(" ").append(childElement.text()).append(" ");
-                    text.append(childElement.text());
-                }
-            } else {
-                // Append text content of non-element nodes
-                text.append(node.outerHtml());
-            }
-        }
-        return text.toString().trim();
     }
 
     void updateQueryHistory(String query) {
@@ -246,9 +330,10 @@ public class QueryProcessor {
         return suggestions;
     }
 
-    public List<Document> searchPhrase(String query) {
-        Set<ObjectId> foundPages = mongoDB.searchPhrase(query);
+    public List<Document> searchByPhrase(String query, Set<ObjectId> resultPagesIndex) {
+        Set<ObjectId> foundPages = mongoDB.searchByWords(query);
         List<Document> searchResult = new ArrayList<>();
+        query = " " + query + " ";
 
         for (ObjectId pageID : foundPages) {
             Document page = mongoDB.findPageById(pageID);
@@ -258,13 +343,14 @@ public class QueryProcessor {
             Elements elements = parsedDocument.select("p");
 
             for (Element element : elements) {
-
                 String text = element.ownText();
                 String lowerCaseText = text.toLowerCase();
                 if (lowerCaseText.contains(query)) {
                     searchResult
                             .add(new Document("URL", page.getString("Link")).append("Title", page.getString("Title"))
-                                    .append("Snippet", makePhraseSnippetBold(text, query)).append("Rank", page.getDouble("PageRank")));
+                                    .append("Snippet", makePhraseSnippetBold(text, query))
+                                    .append("Rank", page.getDouble("PageRank")).append("_id", pageID));
+                    resultPagesIndex.add(pageID);
                     break;
                 }
             }
@@ -276,12 +362,10 @@ public class QueryProcessor {
     public String makePhraseSnippetBold(String snippet, String query) {
         StringBuilder snippetBuilder = new StringBuilder();
         for (int i = 0; i + query.length() < snippet.length(); i++) {
-            if(snippet.substring(i, i + query.length()).equalsIgnoreCase(query)) {
-                snippetBuilder.append(snippet.substring(0, i));
-                snippetBuilder.append(" <b> ");
-                snippetBuilder.append(snippet.substring(i, i + query.length()));
-                snippetBuilder.append(" </b> ");
-                snippetBuilder.append(snippet.substring(i + query.length(), snippet.length())); 
+            if (snippet.substring(i, i + query.length()).equalsIgnoreCase(query)) {
+                snippetBuilder.append(snippet.substring(0, i)).append(" <b>");
+                snippetBuilder.append(snippet.substring(i, i + query.length())).append("</b> ");
+                snippetBuilder.append(snippet.substring(i + query.length(), snippet.length()));
             }
         }
         return snippetBuilder.toString();
@@ -294,8 +378,8 @@ public class QueryProcessor {
         String[] stemmedQueryWords;
         List<Document> searchResult;
 
-        public searchResultWizard(int num, int interval, String[] stemmedQueryWords, List<Document> searchResult, 
-        List<Map.Entry<ObjectId, Double>> pageList) {
+        public searchResultWizard(int num, int interval, String[] stemmedQueryWords, List<Document> searchResult,
+                List<Map.Entry<ObjectId, Double>> pageList) {
             this.num = num;
             this.interval = interval;
             this.stemmedQueryWords = stemmedQueryWords;
@@ -306,34 +390,36 @@ public class QueryProcessor {
         public void run() {
             for (int i = num * interval; i < pageList.size() && i < ((num + 1) * interval); i++) {
                 Document fullPageDoc;
-                synchronized(mongoDB) {
+                synchronized (mongoDB) {
                     fullPageDoc = mongoDB.findPageById(pageList.get(i).getKey());
                 }
                 String HTMLContent = fullPageDoc.getString("HTML");
                 org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
                 Double finalRank = pageList.get(i).getValue() + fullPageDoc.getDouble("PageRank");
                 String snippet = getSnippet(parsedDocument, stemmedQueryWords);
+                if (snippet.length() == 0)
+                    continue;
                 // logo
                 Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
-                    .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
+                        .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
 
-                synchronized(searchResult) {
+                synchronized (searchResult) {
                     searchResult.add(resDoc);
                 }
-            } 
-        }    
+            }
+        }
 
         String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
             Elements elements = parsedDocument.select("p");
-    
+
             for (Element element : elements) {
                 String text = element.ownText();
                 String lowerCaseText = text.toLowerCase();
-    
+
                 for (String queryWord : queryWords) {
                     if (ProcessingWords.isStopWord(queryWord))
                         continue;
-    
+
                     if (lowerCaseText.contains(queryWord)) {
                         // return text;
                         return makeSnippetWordsBold(text, queryWords);
@@ -341,6 +427,35 @@ public class QueryProcessor {
                 }
             }
             return "";
+        }
+
+        private String makeSnippetWordsBold(String snippet, String[] queryWordsArray) {
+            String[] snippetWords = snippet.split("\\s+");
+            List<String> queryWords = new ArrayList<>();
+
+            for (String word : queryWordsArray) {
+                if (!ProcessingWords.isStopWord(word))
+                    queryWords.add(word);
+            }
+
+            StringBuilder snippetBuilder = new StringBuilder();
+            boolean makeBold;
+
+            for (String snippetWord : snippetWords) {
+                makeBold = false;
+                for (String queryWord : queryWords) {
+                    if (snippetWord.equalsIgnoreCase(queryWord) || snippetWord.contains(queryWord)) {
+                        makeBold = true;
+                        break;
+                    }
+                }
+                if (makeBold)
+                    snippetBuilder.append("<b> ");
+                snippetBuilder.append(snippetWord).append(" ");
+                if (makeBold)
+                    snippetBuilder.append("</b> ");
+            }
+            return snippetBuilder.toString().trim();
         }
     }
 }

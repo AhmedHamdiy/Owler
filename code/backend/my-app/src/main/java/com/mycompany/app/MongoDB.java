@@ -279,12 +279,8 @@ public class MongoDB {
         return result;
     }
 
-    public Set<ObjectId> searchPhrase(String phrase) {
-        String[] queryWords = phrase.split("\\s+");
-        for (String string : queryWords) {
-            
-            System.out.println(string);
-        }
+    public Set<ObjectId> searchByWords(String query) {
+        String[] queryWords = query.split("\\s+");
         Set<ObjectId> commonPages = new HashSet<>();
         List<ObjectId> returnedPages = new ArrayList<>();
 
@@ -292,7 +288,7 @@ public class MongoDB {
             if(ProcessingWords.isStopWord(queryWord))
                 continue;
             queryWord = stemmer.stem(queryWord);
-            returnedPages = getPagesByWord(queryWord);
+            returnedPages = getPageIDsPerWord(queryWord);
 
             if (returnedPages == null)
                 continue;
@@ -305,7 +301,7 @@ public class MongoDB {
         return commonPages;
     }
 
-    public List<ObjectId> getPagesByWord(String word) {
+    public List<ObjectId> getPageIDsPerWord(String word) {
         List<ObjectId> pagesHavingWord = new ArrayList<>();
         FindIterable<Document> pageDocs;
         Bson filter = Filters.eq("Word", word);
@@ -384,7 +380,7 @@ public class MongoDB {
         }
     }
 
-    public MongoCursor<Document> getWordPagesCursor(String queryWord) {
+    public MongoCursor<Document> getPagesInfoPerWord(String queryWord) {
         Bson filter = eq("Word", queryWord);
         Bson projection = fields(include("Pages.TF_IDF", "Pages._id", "Pages.Tag"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
