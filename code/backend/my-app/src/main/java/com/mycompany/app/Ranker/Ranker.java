@@ -1,14 +1,8 @@
 package com.mycompany.app.Ranker;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 
-import org.apache.xalan.xsltc.runtime.Node;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -18,16 +12,6 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import com.mycompany.app.MongoDB;
-
-import org.apache.xalan.xsltc.runtime.Node;
-import org.bson.Document;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
-import com.mongodb.client.MongoCursor;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
 
 @Component
 public class Ranker {

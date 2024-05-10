@@ -18,7 +18,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.*;
 
 public class CrawlerOwl implements Runnable {
-    private static final int MAX_NUMBER_PAGES = 50;
+    private static final int MAX_NUMBER_PAGES = 6000;
     static MongoDB mongodb = new MongoDB();
     // We use HashMap to store the blocked URLs for every website by reading
     // robot.txt.
@@ -31,7 +31,6 @@ public class CrawlerOwl implements Runnable {
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<String>();
 
     private Set<String> compactStrings = new HashSet<String>();
-
 
     public CrawlerOwl(Set<String> visited, BlockingQueue<String> pendings, Set<String> compact) {
         visitedPages = visited;

@@ -23,10 +23,11 @@ import java.util.Map;
 import org.bson.Document;
 
 import com.mycompany.app.MongoDB;
+import com.mycompany.app.Service.Pair;
 
 public class Indexer {
-    public static Map<String, List<Document>> WordDocArr;
-    public static List<String> WordList;
+    public static Map<Pair<String, String>, List<Document>> WordDocArr;
+    public static List<Pair<String, String>> WordList;
     public static List<Document> ReadyWords;
     private static MongoDB mongoDB;
     private static int Quantum = -1;
@@ -53,7 +54,7 @@ public class Indexer {
                 Quantum = 0;
             }
 
-        // =====retrive the pages that has not been indexed =====//
+        // =====retrieve the pages that has not been indexed =====//
         List<Document> pageCollection = mongoDB.getnonIndexedPages();
 
         if (pageCollection.isEmpty()) {
@@ -83,26 +84,28 @@ public class Indexer {
         List<Document> words = mongoDB.getWords();
 
         for (Document wordDoc : words) {
+            String word = wordDoc.getString("Word");
+            String stemmedWord = wordDoc.getString("StemmedWord");
+            Pair<String, String> wordPair = new Pair<>(word, stemmedWord);
 
-            String word_value = wordDoc.getString("Word");
+            Object wordPagesArr = wordDoc.get("Pages");
+            List<Document> wordPages = (List<Document>) wordPagesArr;
 
-            Object word_P = wordDoc.get("Pages");
-            List<Document> Word_Pages = (List<Document>) word_P;
-
-            if (WordDocArr.containsKey(word_value)) {
-                Indexer.WordDocArr.get(word_value).addAll(Word_Pages);
+            if (WordDocArr.containsKey(wordPair)) {
+                Indexer.WordDocArr.get(wordPair).addAll(wordPages);
 
                 // =========if it does not exist then no need to update document===========//
             } else {
-                WordDocArr.put(word_value, Word_Pages);
+                WordDocArr.put(wordPair, wordPages);
             }
         }
         // ====drop word collection======//
         mongoDB.dropCollection("Word");
 
-        for (Map.Entry<String, List<Document>> entry : WordDocArr.entrySet()) {
+        for (Map.Entry<Pair<String, String>, List<Document>> entry : WordDocArr.entrySet()) {
             WordList.add(entry.getKey());
         }
+
         System.out.println(WordDocArr.size());
         System.out.println(WordList.size());
 

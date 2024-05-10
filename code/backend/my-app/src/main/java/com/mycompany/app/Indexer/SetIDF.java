@@ -47,7 +47,8 @@ public class SetIDF extends Thread {
                 page.append("TF_IDF", TF_IDF);
             }
             // =====create a new word document and store it in a list of Document ===//
-            Document word = new Document("Word", Indexer.WordList.get(i)).append("Pages", pages).append("IDF", IDF);
+            Document word = new Document("Word", Indexer.WordList.get(i).getKey()).append("StemmedWord", Indexer.WordList.get(i).getValue())
+            .append("Pages", pages).append("IDF", IDF);
 
             synchronized (Indexer.ReadyWords) {
                 Indexer.ReadyWords.add(word);

@@ -16,22 +16,20 @@ public class CrawlerMain {
     static MongoDB mongoDB = new MongoDB();
     public static Set<String> visitedPages;
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
-    public static final String SEED_FILE = "D:\\Study\\Department\\CMP\\Year-Two\\Second Term\\APT\\Crowler\\code\\backend\\my-app\\src\\seed.txt";
-
+    public static final String SEED_FILE = "code\\backend\\my-app\\src\\seed.txt";
     private static Set<String> compactStrings;
-
 
     public static void main(String[] args) {
 
-        System.out.print("Enter the Number of your owls : ");
-        int ThreadNum = 0;
+        System.out.print("Enter the Number of your owls: ");
+        int threadNum = 0;
 
-        while (ThreadNum < 1)
+        while (threadNum < 1)
             try {
-                ThreadNum = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
+                threadNum = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
             } catch (Exception e) {
                 System.out.println("Enter a valid number.");
-                ThreadNum = 0;
+                threadNum = 0;
             }
 
         mongoDB.initializeDatabaseConnection();
@@ -43,21 +41,21 @@ public class CrawlerMain {
         pendingPages = mongoDB.getPendingPages();
 
         if (visitedPages == null) // The crawling process is starting from scratch
-            visitedPages = fetchSeed();// Add the seeds to the pending pages
+            visitedPages = fetchSeed(); // Add the seeds to pending pages
         // Feeding our owls to start the crawling process
-        Thread[] threads = new Thread[ThreadNum];
-        for (int i = 0; i < ThreadNum; i++) {
+        Thread[] threads = new Thread[threadNum];
+        for (int i = 0; i < threadNum; i++) {
 
-            threads[i] = new Thread(new CrawlerOwl(visitedPages, pendingPages,compactStrings));
+            threads[i] = new Thread(new CrawlerOwl(visitedPages, pendingPages, compactStrings));
             threads[i].setName("Owl (" + Integer.toString(i) + ")");
         }
 
         // Start the crawling process
-        for (int i = 0; i < ThreadNum; i++)
+        for (int i = 0; i < threadNum; i++)
             threads[i].start();
 
         // Wait for all owls to finish the crawling process
-        for (int i = 0; i < ThreadNum; i++)
+        for (int i = 0; i < threadNum; i++)
             try {
                 threads[i].join();
                 System.out.println("The owl [" + i + "] has returned home safe.\n");

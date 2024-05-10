@@ -9,7 +9,6 @@ import com.mongodb.client.MongoDatabase;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
-import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
 
 import org.bson.BsonValue;
@@ -24,37 +23,17 @@ import com.mycompany.app.Service.ProcessingWords;
 import opennlp.tools.stemmer.PorterStemmer;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.Updates.set;
 
 import java.io.IOException;
-//
-import com.mongodb.client.*;
-import com.mongodb.client.model.Field;
-
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Projections.*;
-
 import java.util.*;
 import java.lang.Object;
-
-import org.bson.BsonObjectId;
-import org.bson.conversions.Bson;
-
-import java.io.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.mongodb.client.model.Updates.set;
 import static java.lang.Math.log;
-import static java.lang.System.*;
-import static com.mongodb.MongoClientSettings.getDefaultCodecRegistry;
-import static com.mongodb.client.model.Filters.eq;
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
-import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
-import org.bson.codecs.configuration.CodecProvider;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
-import com.mongodb.MongoException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -241,7 +220,7 @@ public class MongoDB {
     }
 
     public List<Document> getWords() { /// work correct 👌
-        // get all the document of words in database
+        // get all the documents of words in database
         FindIterable<Document> iterable = wordCollection.find();
         List<Document> result = new ArrayList<>();
         iterable.into(result);
@@ -381,8 +360,8 @@ public class MongoDB {
     }
 
     public MongoCursor<Document> getPagesInfoPerWord(String queryWord) {
-        Bson filter = eq("Word", queryWord);
-        Bson projection = fields(include("Pages.TF_IDF", "Pages._id", "Pages.Tag"), excludeId());
+        Bson filter = eq("StemmedWord", queryWord);
+        Bson projection = fields(include("Word", "Pages.TF_IDF", "Pages._id", "Pages.Tag"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find(filter).projection(projection).iterator();
         return cursor;
     }

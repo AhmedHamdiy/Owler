@@ -48,10 +48,10 @@ public class PreIndexing extends Thread {
         mongoDB = mongo;
     }
 
-    static List<Pair<String, Double>> filterWords(Elements elements) {
+    static List<Pair<Pair<String, String>, Double>> filterWords(Elements elements) {
 
         // Stores each valid word extracted from the page, with its tag number
-        List<Pair<String, Double>> wordPairs = new ArrayList<>();
+        List<Pair<Pair<String, String>, Double>> wordPairs = new ArrayList<>();
         PorterStemmer stemmer = new PorterStemmer();
 
         for (Element element : elements) {
@@ -75,19 +75,19 @@ public class PreIndexing extends Thread {
 
                 // ==store the result in a new list of pair that stores word with tagNum==//
                 for (String word : words) {
-                    word = word.toLowerCase();
-                    //String stemmedWord = stemmer.stem(word);
                     //word = word.replaceAll(suffixPatternRegex, "");
-                    word = stemmer.stem(word);
+                    String originalWord = word.toLowerCase();
+                    String stemmedWord = stemmer.stem(originalWord);
 
-                    if (ProcessingWords.isStopWord(word) || word == "" || word.length() == 1 || word.length() == 2) 
+                    if (ProcessingWords.isStopWord(originalWord) || word == "" || word.length() == 1 || word.length() == 2) 
                         continue;
                     
                     double tagNum = getTagNum(tagName);
                     
-                    
-                    Pair<String, Double> newPair = new Pair<>(word, tagNum);
-                    wordPairs.add(newPair);
+                    Pair<String, String> wordPair = new Pair<>(originalWord, stemmedWord);
+                    Pair<Pair<String, String>, Double> wordInfo = new Pair<>(wordPair, tagNum);
+                    //Pair<String, Double> newPair = new Pair<>(word, tagNum);
+                    wordPairs.add(wordInfo);
                 }
             }
         }
@@ -125,7 +125,7 @@ public class PreIndexing extends Thread {
                 continue;
 
             // ===== create a map to keep track of the word frequency and tag number =========//
-            Map<String, Pair<Integer, Double>> wordFreq = new HashMap<>();
+            Map<Pair<String, String>, Pair<Integer, Double>> wordFreq = new HashMap<>();
 
             double numTerms = 0;
 
@@ -136,10 +136,10 @@ public class PreIndexing extends Thread {
             Elements elements = document.select("*");
 
             /// ======== filter elements ===============//
-            List<Pair<String, Double>> wordPairs = filterWords(elements);
+            List<Pair<Pair<String, String>, Double>> wordPairs = filterWords(elements);
 
-            // =========loop over the of elements=========//
-            for (Pair<String, Double> wordPair : wordPairs) {
+            // =========loop over elements=========//
+            for (Pair<Pair<String, String>, Double> wordPair : wordPairs) {
                 numTerms++;
 
                 if (wordFreq.containsKey(wordPair.getKey())) {
@@ -163,7 +163,7 @@ public class PreIndexing extends Thread {
             int freq; // ===>FREQUENCY OF THE WORD
             double TF; // ===>TF OF THE PAGE
 
-            for (Map.Entry<String, Pair<Integer, Double>> wordEntry : wordFreq.entrySet()) {
+            for (Map.Entry<Pair<String, String>, Pair<Integer, Double>> wordEntry : wordFreq.entrySet()) {
 
                 freq = (int) wordEntry.getValue().getKey();
                 TF = freq / numTerms;
