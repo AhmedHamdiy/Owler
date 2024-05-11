@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useHistory } from 'react-router-dom';
 import '../Styles/style.css'
-import voiceSearchIcon from '../Styles/voiceSearch.png';
-import searchIcon from "../Styles/search.png";
+import voiceSearchIcon from '../Styles/icons/voiceSearch.png';
+import searchIcon from "../Styles/icons/search.png";
 
 function SearchBar({ onSuggest }) {
     const [query, setQuery] = useState('');

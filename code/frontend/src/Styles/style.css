@@ -64,7 +64,7 @@
     background-color: #E8CFC1;
     padding-top: 10px;
     padding-left: 10px;
-    max-width: 60%;
+    width: 60%;
     display: flex;
     flex-direction: row;
     align-items: start;
@@ -98,37 +98,22 @@
     width: 100%;
 }
 
-.result-span {
+.result-snippet {
     width: 90%;
-    font-size: 14px;
-    overflow: hidden;
-    white-space: no-wrap;
-    text-overflow: ellipsis;
+    font-size: 13px;
+    max-height:40px;
+    white-space: wrap;
 }
 
 /* search results styles */
 .results-container {
-    width: 80%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: start;
     gap: 20px;
     border-radius: 20px;
-}
-
-.page {
-    font-size: 28px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: start;
-    gap: 20px;
-    background-color: #E8CFC1;
-    border-radius: 20px;
-    padding: 20px;
-    color: #2B2012;
-    width: 60%;
 }
 
 .pagination {
@@ -213,7 +198,8 @@ nav {
     background-color: #2B2012;
     color: white;
     padding: 0 20px;
-    height: 220vh;
+    height: fit-content;
+    min-height: 120vh;
 }
 
 .pagination {
