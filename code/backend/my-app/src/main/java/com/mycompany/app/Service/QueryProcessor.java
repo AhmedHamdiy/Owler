@@ -115,8 +115,10 @@ public class QueryProcessor {
             }
             System.out.println("Thread " + thread.getName() + " is done.");
         }
-
+        System.out.println("Number of exact matches: " + searchResult.size());
+        System.err.println("Number of secondary matches: " + secondaryResult.size());
         searchResult.addAll(secondaryResult);
+        System.out.println("Total " + searchResult.size());
         ranker.sortPages(searchResult);
         return searchResult;
     }
@@ -166,7 +168,7 @@ public class QueryProcessor {
             Document page = mongoDB.findPageById(pageID);
             String HTMLContent = page.getString("HTML");
             org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-            // String logoURL = extractLogo(parsedDocument);
+            String Logo = page.getString("Logo");
             Elements elements = parsedDocument.select("p");
 
             for (Element element : elements) {
@@ -175,7 +177,7 @@ public class QueryProcessor {
                 if (lowerCaseText.contains(query)) {
                     searchResult
                             .add(new Document("URL", page.getString("Link")).append("Title", page.getString("Title"))
-                                    .append("Snippet", makePhraseSnippetBold(text, query))
+                                    .append("Snippet", makePhraseSnippetBold(text, query)).append("Logo", Logo)
                                     .append("Rank", page.getDouble("PageRank")).append("_id", pageID));
                     resultPagesIndex.add(pageID);
                     break;
@@ -407,9 +409,9 @@ public class QueryProcessor {
                 String snippet = getSnippet(parsedDocument, stemmedQueryWords);
                 if (snippet.length() == 0)
                     continue;
-                // logo
+                String Logo = fullPageDoc.getString("Logo");
                 Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
-                        .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet);
+                        .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet).append("Logo", Logo);
 
 
                 if (matchMap.get(id)) {

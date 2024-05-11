@@ -9,6 +9,7 @@ function SearchResult ({title,link,snippet,query,icon}){
             if (startIndex !== 0)
                 startIndex--;
             text=text.substring(startIndex,startIndex+100)+"...";
+            return text;
     }
     return(
         <div className='result-container'>   

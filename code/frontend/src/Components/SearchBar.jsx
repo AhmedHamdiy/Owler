@@ -46,7 +46,7 @@ function SearchBar({ onSuggest }) {
             setShowSuggestion(false);
         } else {
             getSuggestions(newQuery).then((suggestions) => {
-                setSuggestions(["ahmed", "hi", "bitch"]);
+                setSuggestions(suggestions);
                 setShowSuggestion(true);
             });
         }
