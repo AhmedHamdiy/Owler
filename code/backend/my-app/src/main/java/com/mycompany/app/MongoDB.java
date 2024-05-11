@@ -100,7 +100,83 @@ public class MongoDB {
                 break;
         }
     }
-
+    public void addOne(Document doc, String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                pageCollection.insertOne(doc);
+                break;
+            case "Word":
+                wordCollection.insertOne(doc);
+                break;
+            case "QueryHistory":
+                queryHistoryCollection.insertOne(doc);
+                break;
+            case "Visited":
+                visitedCollection.insertOne(doc);
+                break;
+            case "ToVisit":
+                toVisitCollection.insertOne(doc);
+                break;
+        }
+    }
+    
+    public Document findOne(Bson filter, String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                return pageCollection.find(filter).first();
+            case "Word":
+                return wordCollection.find(filter).first();
+            case "QueryHistory":
+                return queryHistoryCollection.find(filter).first();
+            case "Visited":
+                return visitedCollection.find(filter).first();
+            case "ToVisit":
+                return toVisitCollection.find(filter).first();
+            default:
+                return null;
+        }
+    }
+    
+    public void replaceOne(Bson filter, Document doc, String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                pageCollection.replaceOne(filter, doc);
+                break;
+            case "Word":
+                wordCollection.replaceOne(filter, doc);
+                break;
+            case "QueryHistory":
+                queryHistoryCollection.replaceOne(filter, doc);
+                break;
+            case "Visited":
+                visitedCollection.replaceOne(filter, doc);
+                break;
+            case "ToVisit":
+                toVisitCollection.replaceOne(filter, doc);
+                break;
+        }
+    }
+    
+    public void deleteOne(Bson filter, String collectionName) {
+        switch (collectionName) {
+            case "Page":
+                pageCollection.deleteOne(filter);
+                break;
+            case "Word":
+                wordCollection.deleteOne(filter);
+                break;
+            case "QueryHistory":
+                queryHistoryCollection.deleteOne(filter);
+                break;
+            case "Visited":
+                visitedCollection.deleteOne(filter);
+                break;
+            case "ToVisit":
+                toVisitCollection.deleteOne(filter);
+                break;
+        }
+    }
+    
     public void dropCollection(String collectionName) {
         switch (collectionName) {
             case "Page":

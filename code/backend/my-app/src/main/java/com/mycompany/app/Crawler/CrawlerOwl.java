@@ -87,7 +87,7 @@ public class CrawlerOwl implements Runnable {
                 try {
                     mongodb.insertOne(new org.bson.Document("URL", url), "ToVisit");
                     pendingPages.add(url);
-                    mongodb.notifyAll(); // if there was a thread waiting for a page to crawl
+                    mongodb.notifyAll(); // If there was a thread waiting for a page to crawl
                 } catch (Exception e) {
                     System.err.println("Error: error in inserting the pending page..");
                 }
@@ -154,15 +154,27 @@ public class CrawlerOwl implements Runnable {
                 String HTMLPage = doc.toString();
                 String compactString = cryptographic(HTMLPage);
                 String title = doc.title();
-                insertVisited(url);
-                if (!compactStrings.contains(compactString)) {
-                    compactStrings.add(compactString);
-                    mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
-                            .append("HTML", HTMLPage).append("compactString", compactString)
-                            .append("isIndexed", false), "Page");
-                    return doc;
+                String logo = extractLogo(doc); // Extract logo from the document
+    
+                // Check if the page has been visited before
+                org.bson.Document visitedDoc = mongodb.findOne(new org.bson.Document("Link", url), "Visited");
+                if (visitedDoc != null) {
+                    String storedCompactString = visitedDoc.getString("compactString");
+                    if (storedCompactString.equals(compactString)) {
+                        // If the content hasn't changed, don't insert it again
+                        return null;
+                    } else {
+                        // If the content has changed, remove the stored document
+                        mongodb.deleteOne(new org.bson.Document("Link", url), "Page");
+                    }
                 }
-                return null;
+    
+                // Insert the new version of the page into the database
+                mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
+                        .append("HTML", HTMLPage).append("compactString", compactString)
+                        .append("isIndexed", false).append("Logo", logo), "Page");
+    
+                return doc;
             } else
                 return null;
         } catch (IOException e) {
@@ -170,6 +182,17 @@ public class CrawlerOwl implements Runnable {
             return null;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private String extractLogo(org.jsoup.nodes.Document doc) {
+        Elements logoElements = doc.select("link[rel~=(?i)^(shortcut|icon|apple-touch-icon)]");
+        if (!logoElements.isEmpty()) {
+            Element logoElement = logoElements.first();
+            String logoUrl = logoElement.attr("href");
+            return logoUrl;
+        } else {
+            return "code/frontend/src/Styles/Owl.png"; // The Default Icon
         }
     }
 
@@ -181,7 +204,7 @@ public class CrawlerOwl implements Runnable {
                 newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
             } else if (newURL.startsWith("javascript:")) // Checks for java pages
                 newURL = null;
-            else if (newURL.indexOf('?') != -1) // ignore queries
+            else if (newURL.indexOf('?') != -1) // Ignore queries
                 newURL = newURL.substring(0, newURL.indexOf('?'));
             return newURL;
         } catch (Exception e) {

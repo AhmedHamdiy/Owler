@@ -1,11 +1,11 @@
 import React from "react";
-function NotFound(){
+import '../Styles/style.css'
+function NotFound() {
     return(
-        <div style={styles.notFound}>
+        <div className='not-found'>
             <h1>404 Not Found</h1>
             <p>
             No results containing all your search terms were found.<br/>
-            {/* Your search query <i><b>{query}</b></i> did not match any documents. */}
             </p>
             <h2>Suggestions:</h2>
             <ul>
@@ -16,22 +16,5 @@ function NotFound(){
         </div>
     );
 }
-
-
-const styles = {
-    notFound: {
-        fontSize: '28px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'start',
-        gap: '20px',
-        backgroundColor: '#E8CFC1',
-        borderRadius: '20px',
-        padding: '20px',
-        color: '#2B2012',
-        width: '60%'
-    }
-};
 
 export default NotFound;

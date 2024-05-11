@@ -1,5 +1,6 @@
-import React, { Fragment, useState } from "react";
+import React, { useState } from "react";
 import { useHistory } from 'react-router-dom';
+import '../Styles/style.css'
 import voiceSearchIcon from '../Styles/voiceSearch.png';
 import searchIcon from "../Styles/search.png";
 
@@ -16,17 +17,14 @@ function SearchBar({ onSuggest }) {
 
     const getSuggestions = async (query) => {
         try {
-            //const response = await fetch(`http://localhost:5000/suggest/${query}`);
             const requestOptions = {
                 method: 'POST',
                 headers: {
-                  'Content-Type': 'text/plain' // Specify the content type as plain text
+                    'Content-Type': 'text/plain' 
                 },
-                body: query // Set the plain text data as the body of the request
+                body: query 
             };
-
             const response = await fetch("http://localhost:5000/suggest", requestOptions);
-
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
@@ -48,7 +46,7 @@ function SearchBar({ onSuggest }) {
             setShowSuggestion(false);
         } else {
             getSuggestions(newQuery).then((suggestions) => {
-                setSuggestions(suggestions);
+                setSuggestions(["ahmed", "hi", "bitch"]);
                 setShowSuggestion(true);
             });
         }
@@ -73,77 +71,29 @@ function SearchBar({ onSuggest }) {
     };
 
     return (
-        <Fragment>
-            <div style={styles.searchBar}>
+        <div className="search-bar-container">
+            <div className="search-bar">
                 <input required type="search" onChange={makeSuggestions}
-                    style={styles.queryTextBox} value={query} placeholder="Search"/>
+                    className="query-text-box" value={query}
+                    placeholder="Type Queries Then Hoot" />
                 
                 <img src={searchIcon} alt="Search"
-                    onClick={hootQuery} style={styles.icon}/>
+                    onClick={hootQuery} className="icon"/>
                 
                 <img src={voiceSearchIcon} alt="Voice Search"
-                    onClick={voiceSearch} style={styles.icon}/>
-                
+                    onClick={voiceSearch} className="icon"/>
             </div>
             
             {showSuggestion&& (
-                <ul style={styles.suggestionsList}>
+                <ul className="suggestions-list">
                     {suggestions.map((suggestion, index) => (
-                        <li key={index} style={styles.suggestion}
+                        <li key={index} className="suggestion"
                         onClick={() => handleSuggestionClick(suggestion)}>{suggestion}</li>
                     ))}
                 </ul>
             )}
-        </Fragment>
+        </div>
     );
 }
-
-const styles = {
-    searchBar: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "relative",
-        top: "20px",
-        backgroundColor: "white",
-        borderRadius: "10px",
-        height: "64px",
-        padding: "0 20px",
-        gap: "10px",
-        width: "40%",
-        marginBottom: "10px",
-    },
-    queryTextBox: {
-        margin: "0 auto",
-        height: "40px",
-        fontSize: "larger",
-        width: "100%",
-        border: "none",
-        outline: "none",
-    },
-    icon: {
-        margin: "10 auto",
-        width: "35px",
-        height: "35px",
-        cursor: "pointer",
-    },
-    suggestionsList: {
-        listStyleType: "none",
-        padding: "10px 0",
-        margin: -14.8,
-        backgroundColor: "#fff",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        borderRadius: "10px",
-        width: "42.2%",
-        zIndex: 1,
-        fontSize: "larger",
-    },
-    suggestion:{
-        padding: "10px",
-        marginTop: "5px",
-        cursor: "pointer",
-    },
-};
 
 export default SearchBar;
