@@ -132,7 +132,7 @@ body {
 
 .result-snippet {
     width: 90%;
-    font-size: 14px;
+    font-size: 16px;
     max-height:40px;
     white-space: wrap;
 }
@@ -146,10 +146,14 @@ body {
     justify-content: start;
     gap: 20px;
     border-radius: 20px;
+    height: fit-content;
+    margin-bottom: 20px;
+    padding: 0px 0px 50px 0px;
 }
 
 .pagination {
     display: flex;
+    background-color: var(--primary-color);
     flex-direction: row;
     justify-content: center;
     gap: 20px;
@@ -253,9 +257,10 @@ nav {
     gap: 5px;
     background-color: var(--primary-color);
     color: white;
-    padding: 0 20px;
+    padding: 20px 20px;
     height: fit-content;
     min-height: 100vh;
+    margin-bottom: 20px;
 }
 
 /* Not found page styles */

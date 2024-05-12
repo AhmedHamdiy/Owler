@@ -1,7 +1,9 @@
 package com.mycompany.app.Service;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,19 +46,20 @@ public class QueryProcessor {
         if (query.charAt(0) == '\"') 
             return readLogicalExpression(halfProcessedQuery);
 
-        String[] queryWords = halfProcessedQuery.split("\\s+");
-        String[] stemmedQueryWords = Arrays.copyOf(queryWords, queryWords.length);
+        String[] queryWordsArr = halfProcessedQuery.split("\\s+");
+        List<String> stemmedQueryWords = new ArrayList<>();
         HashMap<ObjectId, Double> resultPageMap = new HashMap<>();
         HashMap<ObjectId, Boolean> matchMap = new HashMap<>();
 
-        for (int i = 0; i < queryWords.length; i++) {
-            stemmedQueryWords[i] = stemmer.stem(queryWords[i]);
+        for (String queryWord : queryWordsArr) {
+            stemmedQueryWords.add(stemmer.stem(queryWord));
         }
 
-        String stemmedWord, originalWord;
-        for (int i = 0; i < stemmedQueryWords.length; i++) {
-            stemmedWord = stemmedQueryWords[i];
-            originalWord = queryWords[i];
+        String originalWord;
+        int j = 0;
+
+        for (String stemmedWord : stemmedQueryWords) {
+            originalWord = queryWordsArr[j++];
 
             if (ProcessingWords.isStopWord(stemmedWord))
                 continue;
@@ -146,7 +149,8 @@ public class QueryProcessor {
         });
 
         for (Document document : suggestionDocs) {
-            suggestions.add(document.getString("Query"));
+            if (suggestions.size() < 5)
+                suggestions.add(document.getString("Query"));
         }
 
         return suggestions;
@@ -192,9 +196,12 @@ public class QueryProcessor {
         StringBuilder snippetBuilder = new StringBuilder();
         for (int i = 0; i + query.length() < snippet.length(); i++) {
             if (snippet.substring(i, i + query.length()).equalsIgnoreCase(query)) {
-                snippetBuilder.append(snippet.substring(0, i)).append(" <b>");
+                int startIndex = max(i - 150, 0);
+                int endIndex = min(i + 150, snippet.length());
+
+                snippetBuilder.append("..").append(snippet.substring(startIndex, i)).append(" <b>");
                 snippetBuilder.append(snippet.substring(i, i + query.length())).append("</b> ");
-                snippetBuilder.append(snippet.substring(i + query.length(), snippet.length()));
+                snippetBuilder.append(snippet.substring(i + query.length(), endIndex)).append("...");
             }
         }
         return snippetBuilder.toString();
@@ -381,12 +388,12 @@ public class QueryProcessor {
     class searchResultWizard extends Thread {
         private int num;
         List<Map.Entry<ObjectId, Double>> pageList;
-        String[] stemmedQueryWords;
+        List<String> stemmedQueryWords;
         List<Document> searchResult;
         List<Document> secondaryResult;
         Map<ObjectId, Boolean> matchMap;
 
-        public searchResultWizard(int num, String[] stemmedQueryWords, List<Document> searchResult, List<Document> secondaryResult,
+        public searchResultWizard(int num, List<String> stemmedQueryWords, List<Document> searchResult, List<Document> secondaryResult,
                 List<Map.Entry<ObjectId, Double>> pageList, Map<ObjectId, Boolean> matchMap) {
             this.num = num;
             this.stemmedQueryWords = stemmedQueryWords;
@@ -407,7 +414,7 @@ public class QueryProcessor {
                 org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
                 Double finalRank = pageList.get(i).getValue() + fullPageDoc.getDouble("PageRank");
                 String snippet = getSnippet(parsedDocument, stemmedQueryWords);
-                if (snippet.length() == 0)
+                if (snippet.length() < 20)
                     continue;
                 String Logo = fullPageDoc.getString("Logo");
                 Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
@@ -426,42 +433,50 @@ public class QueryProcessor {
             }
         }
 
-        private String getSnippet(org.jsoup.nodes.Document parsedDocument, String[] queryWords) {
+        private String getSnippet(org.jsoup.nodes.Document parsedDocument, List<String> queryWords) {
             Elements elements = parsedDocument.select("p");
+            Iterator<String> it = queryWords.iterator();
+
+            while(it.hasNext()) {
+                if (ProcessingWords.isStopWord(it.next())) {
+                    it.remove();
+                }
+            }
 
             for (Element element : elements) {
                 String text = element.ownText();
                 String lowerCaseText = text.toLowerCase();
 
                 for (String queryWord : queryWords) {
-                    if (ProcessingWords.isStopWord(queryWord))
-                        continue;
+                    
+                    for (int i = 0; i + queryWord.length() < lowerCaseText.length(); i++) {
+                        if (lowerCaseText.substring(i, i + queryWord.length()).equals(queryWord)) {
+                            int startIndex = max(i - 150, 0);
+                            int endIndex = min(i + 150, text.length());
 
-                    if (lowerCaseText.contains(queryWord)) {
-                        // return text;
-                        return makeSnippetWordsBold(text, queryWords);
+                            String snippet = text.substring(startIndex, endIndex);
+                            return makeSnippetWordsBold(snippet, queryWords);
+                        }
                     }
+
+                    /* if (lowerCaseText.contains(queryWord)) {
+                        return makeSnippetWordsBold(text, queryWords);
+                    } */
                 }
             }
             return "";
         }
 
-        private String makeSnippetWordsBold(String snippet, String[] queryWordsArray) {
+        private String makeSnippetWordsBold(String snippet, List<String> queryWords) {
             String[] snippetWords = snippet.split("\\s+");
-            List<String> queryWords = new ArrayList<>();
-
-            for (String word : queryWordsArray) {
-                if (!ProcessingWords.isStopWord(word))
-                    queryWords.add(word);
-            }
-
             StringBuilder snippetBuilder = new StringBuilder();
+            snippetBuilder.append("..");
             boolean makeBold;
 
             for (String snippetWord : snippetWords) {
                 makeBold = false;
                 for (String queryWord : queryWords) {
-                    if (snippetWord.equalsIgnoreCase(queryWord) || snippetWord.contains(queryWord)) {
+                    if (snippetWord.equalsIgnoreCase(queryWord) || snippetWord.toLowerCase().contains(queryWord)) {
                         makeBold = true;
                         break;
                     }
@@ -472,7 +487,7 @@ public class QueryProcessor {
                 if (makeBold)
                     snippetBuilder.append("</b> ");
             }
-            return snippetBuilder.toString().trim();
+            return snippetBuilder.append("...").toString();
         }
     }
 }

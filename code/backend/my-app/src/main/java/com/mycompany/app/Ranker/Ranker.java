@@ -16,10 +16,6 @@ import com.mycompany.app.MongoDB;
 @Component
 public class Ranker {
     final private MongoDB mongoDB = new MongoDB();
-    final private String pageCollection = "Page";
-    final private String wordCollection = "Word";
-    final private String historyCollection = "History";
-    final private String retrievedCollection = "Retrieved";
 
     public Ranker() {
         mongoDB.initializeDatabaseConnection();
