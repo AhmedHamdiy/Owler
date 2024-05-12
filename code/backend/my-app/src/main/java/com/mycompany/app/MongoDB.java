@@ -377,10 +377,6 @@ public class MongoDB {
         return pagesHavingWord;
     }
 
-    /**
-     * Updates IDF for each word in word collection according to existing metrics
-     * (as IDF = total n of pages / DF)
-     */
     public void updateIDF() {
         Bson projection = fields(include("Word", "No_pages"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
@@ -394,12 +390,6 @@ public class MongoDB {
         }
     }
 
-    /**
-     * Updates TF for each reference (in a particular page) for each word in the
-     * word collection,
-     * based on existing metrics (as TF = times mentioned in page 'frequency' /
-     * total n of words in page).
-     */
     public void updateTF() {
         Bson projection = fields(include("Word", "Pages"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
@@ -417,10 +407,6 @@ public class MongoDB {
         }
     }
 
-    /**
-     * Updates rank (TF-IDF) for each reference (in a particular page) of each word
-     * based on existing TF & IDF metrics.
-     */
     public void updateRank() {
         Bson projection = fields(include("Word", "IDF", "Pages.Doc_Id", "Pages.TF", "Pages.Rank"), excludeId());
         MongoCursor<Document> cursor = wordCollection.find().projection(projection).iterator();
