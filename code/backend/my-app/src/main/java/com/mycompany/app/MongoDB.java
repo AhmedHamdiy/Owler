@@ -363,6 +363,9 @@ public class MongoDB {
         Bson projection = fields(include("Pages._id"), excludeId());
         pageDocs = wordCollection.find(filter).projection(projection);
 
+        if (pageDocs.first() == null)
+            return null;
+
         List<Document> pageArray = (List<Document>) (pageDocs.first().get("Pages"));
 
         if (pageArray == null)
