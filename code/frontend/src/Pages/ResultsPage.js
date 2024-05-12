@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import Owl from '../Styles/img/Owl.png'
+import Owl from '../Styles/img/OwlLogo.svg'
 import '../Styles/style.css'
 import SearchBar from "../Components/SearchBar.jsx";
 import NotFound from "../Components/NotFound.jsx";
 import SearchResults from "../Components/SearchResults.jsx";
+import Footer from "../Components/Footer.jsx";
 
 function ResultsPage(props) {
     const [searchTime, setSearchTime] = useState(0);
@@ -46,15 +47,16 @@ function ResultsPage(props) {
     return (
         <div className="results-page-container ">
             <nav>
-                <img src={Owl} alt="Owl" className="owl-img"/>
+                <img src={Owl} alt="Owl" className="owl-img" />
+                <SearchBar onSuggest={() => { }}/>
                 <h5>search time = {searchTime} seconds</h5>
             </nav>
-                <SearchBar onSuggest={() => { }}/>
             {loading ? (
                 <div style={{color:"#2B2012"}}>Loading...</div>
             ) : (
                 results.length === 0 ? <NotFound /> : <SearchResults results={results} />
             )}
+            <Footer/>
         </div>
     );
 }

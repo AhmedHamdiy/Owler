@@ -8,14 +8,38 @@ function SearchBar({ onSuggest }) {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestion, setShowSuggestion] = useState(false);
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
     const history = useHistory();
 
     const hootQuery = (e) => {
         e.preventDefault();
         history.push(`/search?q=${query}`);
     };
-
-    const getSuggestions = async (query) => {
+    
+    const handleKeyDown = (event) => {
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setSelectedSuggestionIndex((prevIndex) =>
+                Math.max(prevIndex - 1, 0));
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setSelectedSuggestionIndex((prevIndex) =>
+                Math.min(prevIndex + 1, suggestions.length - 1)
+            );
+        } else if (event.key === 'Enter') {
+            if (selectedSuggestionIndex !== -1) {
+                let newQuery = suggestions[selectedSuggestionIndex];
+                setQuery(newQuery);
+                setSuggestions([]);
+                setShowSuggestion(false);
+                setSelectedSuggestionIndex(-1);
+            }
+            else
+                hootQuery(event);
+        }
+    };
+    
+    const getSuggestions = async (queryLength) => {
         try {
             const requestOptions = {
                 method: 'POST',
@@ -40,7 +64,7 @@ function SearchBar({ onSuggest }) {
     const makeSuggestions = (e) => {
         const newQuery = e.target.value;
         setQuery(newQuery);
-        onSuggest(newQuery);
+        onSuggest(newQuery.length);
         if (newQuery.length === 0) {
             setSuggestions([]);
             setShowSuggestion(false);
@@ -75,7 +99,8 @@ function SearchBar({ onSuggest }) {
             <div className="search-bar">
                 <input required type="search" onChange={makeSuggestions}
                     className="query-text-box" value={query}
-                    placeholder="Type Queries Then Hoot" />
+                    placeholder="Type Queries Then Hoot"
+                    onKeyDown={handleKeyDown}/>
                 
                 <img src={searchIcon} alt="Search"
                     onClick={hootQuery} className="icon"/>
@@ -87,9 +112,11 @@ function SearchBar({ onSuggest }) {
             {showSuggestion&& (
                 <ul className="suggestions-list">
                     {suggestions.map((suggestion, index) => (
-                        <li key={index} className="suggestion"
-                        onClick={() => handleSuggestionClick(suggestion)}>{suggestion}</li>
-                    ))}
+                        <li key={index}
+                            className={index === selectedSuggestionIndex ? 'selected suggestion' : 'suggestion'}
+                            onClick={() => handleSuggestionClick(suggestion)}>
+                            {suggestion}
+                        </li>))}
                 </ul>
             )}
         </div>
