@@ -2,6 +2,7 @@ package com.mycompany.app.Crawler;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
