@@ -103,6 +103,12 @@ body {
     justify-content: start;
     gap: 10px;
 }
+.result-icon{
+    height: 60px;
+    width: 60px;
+    border-radius: 50%;
+    cursor: pointer;
+}
 
 .result-content-container {
     height: 100px;

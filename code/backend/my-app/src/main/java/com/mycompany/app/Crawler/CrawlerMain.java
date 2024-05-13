@@ -9,13 +9,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import org.bson.Document;
-
 import com.mycompany.app.MongoDB;
 
 public class CrawlerMain {
     static MongoDB mongoDB = new MongoDB();
     public static Set<String> visitedPages;
-    public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
+    public static BlockingQueue<String> pendingPages;
     public static final String SEED_FILE = "code\\backend\\my-app\\src\\seed.txt";
     private static Set<String> compactStrings;
 
@@ -34,14 +33,29 @@ public class CrawlerMain {
 
         mongoDB.initializeDatabaseConnection();
 
-        // fetch the visited pages from the database to continue the crawling process
+        // Fetch the visited pages from the database to continue the crawling process
         // (if it was interrupted)
         visitedPages = mongoDB.getVisitedPages();
         compactStrings = mongoDB.getCompactStrings();
         pendingPages = mongoDB.getPendingPages();
 
         if (visitedPages == null) // The crawling process is starting from scratch
-            visitedPages = fetchSeed(); // Add the seeds to pending pages
+        {
+            System.out.println();
+            System.out.println("OLOOOOO");
+            System.out.println("   ");
+            try {
+                int num  = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
+            } catch (NumberFormatException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            pendingPages = fetchSeed(); // Add the seeds to pending pages
+            visitedPages = new HashSet<>();
+        }
         // Feeding our owls to start the crawling process
         Thread[] threads = new Thread[threadNum];
         for (int i = 0; i < threadNum; i++) {
@@ -66,14 +80,15 @@ public class CrawlerMain {
         mongoDB.closeConnection();
     }
 
-    private static Set<String> fetchSeed() {
-        Set<String> seeds = new HashSet<String>();
+    private static BlockingQueue<String> fetchSeed() {
+        BlockingQueue<String> seeds = new LinkedBlockingQueue<String>();
         try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
-            String URL;
-            while ((URL = br.readLine()) != null) {
-                System.out.println("Seed URL: " + URL); // Test
-                seeds.add(URL);
-                mongoDB.insertOne(new Document("URL", URL), "ToVisit");
+            String Link;
+            while ((Link = br.readLine()) != null) {
+                System.out.println("Seed URL: " + Link); // Test
+                System.out.println("ALOOOOOOO");
+                seeds.add(Link);
+                mongoDB.insertOne(new Document("Link", Link), "ToVisit");
             }
             return seeds;
         } catch (IOException e) {
@@ -81,5 +96,4 @@ public class CrawlerMain {
             return null;
         }
     }
-
 }

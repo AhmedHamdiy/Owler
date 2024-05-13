@@ -31,6 +31,8 @@ public class QueryProcessor {
     private Ranker ranker;
     private PorterStemmer stemmer = new PorterStemmer();
     private static final int interval = 10;
+    HashMap<ObjectId, Double> resultPageMap = new HashMap<>();
+    HashMap<ObjectId, Boolean> matchMap = new HashMap<>();
 
     public QueryProcessor(MongoDB mongoDB, Ranker ranker) {
         this.mongoDB = mongoDB;
@@ -43,74 +45,58 @@ public class QueryProcessor {
         updateQueryHistory(halfProcessedQuery);
 
         // Look for phrases first
-        if (query.charAt(0) == '\"') 
+        if (query.charAt(0) == '\"')
             return readLogicalExpression(halfProcessedQuery);
 
         String[] queryWordsArr = halfProcessedQuery.split("\\s+");
         List<String> stemmedQueryWords = new ArrayList<>();
-        HashMap<ObjectId, Double> resultPageMap = new HashMap<>();
-        HashMap<ObjectId, Boolean> matchMap = new HashMap<>();
 
         for (String queryWord : queryWordsArr) {
             stemmedQueryWords.add(stemmer.stem(queryWord));
         }
 
         String originalWord;
-        int j = 0;
+        int j = 0, threadNum1 = 0;
+        List<Thread> threadList1 = new ArrayList<>();
 
         for (String stemmedWord : stemmedQueryWords) {
             originalWord = queryWordsArr[j++];
-
             if (ProcessingWords.isStopWord(stemmedWord))
                 continue;
 
-            MongoCursor<Document> cursor = mongoDB.getPagesInfoPerWord(stemmedWord);
+            Thread thread = new SearchWizard(stemmedWord, originalWord);
+            thread.setName("Search Wizard #" + threadNum1);
+            thread.start();
+            threadList1.add(thread);
+            threadNum1++;
+        }
 
-            while (cursor.hasNext()) {
-                Document doc = cursor.next();
-                Object obj = doc.get("Pages");
-                String pageOriginalWord = doc.getString("Word");
-
-                for (Document page : (List<Document>) obj) {
-                    ObjectId id = page.getObjectId("_id");
-                    Double TF_IDF = page.getDouble("TF_IDF");
-                    Double tagNum = page.getDouble("Tag");
-                    Double relevance = TF_IDF + tagNum;
-
-                    Double prev = resultPageMap.get(id);
-                    if (prev == null) {
-                        resultPageMap.put(id, relevance);
-
-                        if (pageOriginalWord.equalsIgnoreCase(originalWord))
-                            matchMap.put(id, true);
-                        else
-                            matchMap.put(id, false);
-                    }
-                    else {
-                        resultPageMap.put(id, relevance + prev);
-
-                        if (pageOriginalWord.equalsIgnoreCase(originalWord))
-                            matchMap.put(id, true);
-                    }
-                }
+        for (Thread thread : threadList1) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
+            System.out.println("Thread " + thread.getName() + " is done.");
         }
 
         List<Map.Entry<ObjectId, Double>> list = new ArrayList<>(resultPageMap.entrySet());
         List<Document> searchResult = new ArrayList<>();
         List<Document> secondaryResult = new ArrayList<>();
-        List<Thread> threadList = new ArrayList<>();
-        int threadNum = 0;
+        List<Thread> threadList2 = new ArrayList<>();
+        int threadNum2 = 0;
 
         for (int i = 0; i < list.size(); i = i + interval) {
-            Thread thread = new searchResultWizard(threadNum, stemmedQueryWords, searchResult, secondaryResult, list, matchMap);
-            thread.setName("Search Wizard #" + threadNum);
+            Thread thread = new SearchResultWizard(threadNum2, stemmedQueryWords, searchResult, secondaryResult, list,
+                    matchMap);
+            thread.setName("Search Result Wizard #" + threadNum2);
             thread.start();
-            threadList.add(thread);
-            threadNum++;
+            threadList2.add(thread);
+            threadNum2++;
         }
 
-        for (Thread thread : threadList) {
+        for (Thread thread : threadList2) {
             try {
                 thread.join();
             } catch (InterruptedException e) {
@@ -133,7 +119,7 @@ public class QueryProcessor {
 
         query = query.trim();
 
-        while (cursor.hasNext()) {
+        while (cursor.hasNext() && suggestionDocs.size() < 5) {
             Document prevQueryDoc = cursor.next();
             String prevQuery = prevQueryDoc.getString("Query");
 
@@ -167,27 +153,27 @@ public class QueryProcessor {
         Set<ObjectId> foundPages = mongoDB.searchByWords(query);
         List<Document> searchResult = new ArrayList<>();
         query = " " + query + " ";
+        System.out.println("set size" + foundPages.size());
+        List<Thread> threadList = new ArrayList<>();
 
-        for (ObjectId pageID : foundPages) {
-            Document page = mongoDB.findPageById(pageID);
-            String HTMLContent = page.getString("HTML");
-            org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
-            String Logo = page.getString("Logo");
-            Elements elements = parsedDocument.select("p");
-
-            for (Element element : elements) {
-                String text = element.ownText();
-                String lowerCaseText = text.toLowerCase();
-                if (lowerCaseText.contains(query)) {
-                    searchResult
-                            .add(new Document("URL", page.getString("Link")).append("Title", page.getString("Title"))
-                                    .append("Snippet", makePhraseSnippetBold(text, query)).append("Logo", Logo)
-                                    .append("Rank", page.getDouble("PageRank")).append("_id", pageID));
-                    resultPagesIndex.add(pageID);
-                    break;
-                }
-            }
+        int threadNum = 0;
+        for (int i = 0; i < foundPages.size(); i += interval) {
+            Thread thread = new PhraseSearchWizard(threadNum, query, searchResult, foundPages, resultPagesIndex);
+            thread.setName("Phrase Search Wizard #" + threadNum);
+            threadList.add(thread);
+            thread.start();
+            threadNum++;
         }
+
+        for (Thread thread : threadList) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Thread " + thread.getName() + " is done.");
+        }
+
         ranker.sortPages(searchResult);
         return searchResult;
     }
@@ -333,12 +319,12 @@ public class QueryProcessor {
     }
 
     private boolean containsDocument(ObjectId id, List<Document> docList) {
-        for (Document doc : docList) 
+        for (Document doc : docList)
             if (doc.getObjectId(docList) == id)
                 return true;
         return false;
     }
-   
+
     private List<Document> executeOR(String phrase1, String phrase2, Set<ObjectId> resultsPageIndex) {
         List<Document> result1 = searchByPhrase(phrase1, resultsPageIndex);
         List<Document> result2 = searchByPhrase(phrase2, resultsPageIndex);
@@ -372,7 +358,7 @@ public class QueryProcessor {
         }
         return finalResult;
     }
-    
+
     private int readPhrase(List<String> phraseList, String query, int i) {
         i++;
         int j = i;
@@ -385,7 +371,7 @@ public class QueryProcessor {
         return phrase.length();
     }
 
-    class searchResultWizard extends Thread {
+    class SearchResultWizard extends Thread {
         private int num;
         List<Map.Entry<ObjectId, Double>> pageList;
         List<String> stemmedQueryWords;
@@ -393,7 +379,8 @@ public class QueryProcessor {
         List<Document> secondaryResult;
         Map<ObjectId, Boolean> matchMap;
 
-        public searchResultWizard(int num, List<String> stemmedQueryWords, List<Document> searchResult, List<Document> secondaryResult,
+        public SearchResultWizard(int num, List<String> stemmedQueryWords, List<Document> searchResult,
+                List<Document> secondaryResult,
                 List<Map.Entry<ObjectId, Double>> pageList, Map<ObjectId, Boolean> matchMap) {
             this.num = num;
             this.stemmedQueryWords = stemmedQueryWords;
@@ -418,8 +405,8 @@ public class QueryProcessor {
                     continue;
                 String Logo = fullPageDoc.getString("Logo");
                 Document resDoc = new Document("Rank", finalRank).append("URL", fullPageDoc.getString("Link"))
-                        .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet).append("Logo", Logo);
-
+                        .append("Title", fullPageDoc.getString("Title")).append("Snippet", snippet)
+                        .append("Logo", Logo);
 
                 if (matchMap.get(id)) {
                     synchronized (searchResult) {
@@ -437,7 +424,7 @@ public class QueryProcessor {
             Elements elements = parsedDocument.select("p");
             Iterator<String> it = queryWords.iterator();
 
-            while(it.hasNext()) {
+            while (it.hasNext()) {
                 if (ProcessingWords.isStopWord(it.next())) {
                     it.remove();
                 }
@@ -448,9 +435,8 @@ public class QueryProcessor {
                 String lowerCaseText = text.toLowerCase();
 
                 for (String queryWord : queryWords) {
-                    
                     for (int i = 0; i + queryWord.length() < lowerCaseText.length(); i++) {
-                        if (lowerCaseText.substring(i, i + queryWord.length()).equals(queryWord)) {
+                        if (lowerCaseText.substring(i, i + queryWord.length() + 1).equals(" " + queryWord)) {
                             int startIndex = max(i - 150, 0);
                             int endIndex = min(i + 150, text.length());
 
@@ -458,10 +444,6 @@ public class QueryProcessor {
                             return makeSnippetWordsBold(snippet, queryWords);
                         }
                     }
-
-                    /* if (lowerCaseText.contains(queryWord)) {
-                        return makeSnippetWordsBold(text, queryWords);
-                    } */
                 }
             }
             return "";
@@ -488,6 +470,93 @@ public class QueryProcessor {
                     snippetBuilder.append("</b> ");
             }
             return snippetBuilder.append("...").toString();
+        }
+    }
+
+    class SearchWizard extends Thread {
+        private String stemmedWord;
+        private String originalWord;
+
+        public SearchWizard(String stemmedWord, String originalWord) {
+            this.stemmedWord = stemmedWord;
+            this.originalWord = originalWord;
+        }
+
+        public void run() {
+            MongoCursor<Document> cursor = mongoDB.getPagesInfoPerWord(stemmedWord);
+
+            while (cursor.hasNext()) {
+                Document doc = cursor.next();
+                Object obj = doc.get("Pages");
+                String pageOriginalWord = doc.getString("Word");
+
+                for (Document page : (List<Document>) obj) {
+                    ObjectId id = page.getObjectId("_id");
+                    Double TF_IDF = page.getDouble("TF_IDF");
+                    Double tagNum = page.getDouble("Tag");
+                    Double relevance = TF_IDF + tagNum;
+
+                    Double prev = resultPageMap.get(id);
+
+                    if (prev == null) {
+                        resultPageMap.put(id, relevance);
+
+                        if (pageOriginalWord.equalsIgnoreCase(originalWord))
+                            matchMap.put(id, true);
+                        else
+                            matchMap.put(id, false);
+                    } else {
+                        resultPageMap.put(id, relevance + prev);
+
+                        if (pageOriginalWord.equalsIgnoreCase(originalWord))
+                            matchMap.put(id, true);
+                    }
+                }
+            }
+        }
+    }
+
+    class PhraseSearchWizard extends Thread {
+        int num;
+        String query;
+        List<Document> searchResult;
+        List<ObjectId> foundPages;
+        Set<ObjectId> resultPagesIndex;
+
+        public PhraseSearchWizard(int num, String query, List<Document> searchResult, Set<ObjectId> foundPages, 
+        Set<ObjectId> resultPagesIndex) {
+            this.num = num;
+            this.query = query;
+            this.searchResult = searchResult;
+            this.foundPages = new ArrayList<>(foundPages);
+            this.resultPagesIndex = resultPagesIndex;
+        }
+
+        public void run() {
+            for (int i = num * interval; i < foundPages.size() && i < (num + 1) * interval; i++) {
+                ObjectId pageID = foundPages.get(i);
+                Document page = mongoDB.findPageById(pageID);
+                if (page == null) 
+                    System.out.println("I FOUND NULL");
+                String HTMLContent = page.getString("HTML");
+                org.jsoup.nodes.Document parsedDocument = Jsoup.parse(HTMLContent);
+                String Logo = page.getString("Logo");
+                Elements elements = parsedDocument.select("p");
+
+                for (Element element : elements) {
+                    String text = element.ownText();
+                    String lowerCaseText = text.toLowerCase();
+                    if (lowerCaseText.contains(query)) {
+                        searchResult
+                                .add(new Document("URL", page.getString("Link"))
+                                        .append("Title", page.getString("Title"))
+                                        .append("Snippet", makePhraseSnippetBold(text, query)).append("Logo", Logo)
+                                        .append("Rank", page.getDouble("PageRank")).append("_id", pageID));
+                        resultPagesIndex.add(pageID);
+                        break;
+                    }
+                }
+            }
         }
     }
 }
