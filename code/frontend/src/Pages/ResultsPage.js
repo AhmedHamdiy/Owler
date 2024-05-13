@@ -8,7 +8,137 @@ import Footer from "../Components/Footer.jsx";
 
 function ResultsPage(props) {
     const [searchTime, setSearchTime] = useState(0);
-    const [results, setResults] = useState([]);
+    const [results, setResults] = useState([
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        {
+            title: "Title",
+            link: "Link",
+            snippet: "Snippet",
+            icon: "Icon"
+        },
+        
+
+    ]);
     const [loading, setLoading] = useState(true);
     const queryParams = new URLSearchParams(props.location.search);
     const query = queryParams.get('q');
