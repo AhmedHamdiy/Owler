@@ -155,7 +155,7 @@ public class CrawlerOwl implements Runnable {
                 String compactString = cryptographic(HTMLPage);
                 String title = doc.title();
                 String logo = extractLogo(doc); // Extract logo from the document
-    
+
                 // Check if the page has been visited before
                 org.bson.Document visitedDoc = mongodb.findOne(new org.bson.Document("Link", url), "Visited");
                 if (visitedDoc != null) {
@@ -168,12 +168,12 @@ public class CrawlerOwl implements Runnable {
                         mongodb.deleteOne(new org.bson.Document("Link", url), "Page");
                     }
                 }
-    
+
                 // Insert the new version of the page into the database
                 mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
                         .append("HTML", HTMLPage).append("compactString", compactString)
                         .append("isIndexed", false).append("Logo", logo), "Page");
-    
+
                 return doc;
             } else
                 return null;
@@ -199,8 +199,8 @@ public class CrawlerOwl implements Runnable {
     private String normalizeURL(String newURL, String source) {
         try {
             URL url = new URL(source);
-            if (newURL.startsWith("./")) {
-                newURL = newURL.substring(2);
+            if (newURL.startsWith("./") || newURL.startsWith("/")) {
+                newURL = newURL.substring(newURL.indexOf('/') + 1);
                 newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
             } else if (newURL.startsWith("javascript:")) // Checks for java pages
                 newURL = null;

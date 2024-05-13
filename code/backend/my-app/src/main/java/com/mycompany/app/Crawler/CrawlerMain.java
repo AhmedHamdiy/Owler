@@ -9,7 +9,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import org.bson.Document;
-
 import com.mycompany.app.MongoDB;
 
 public class CrawlerMain {
@@ -34,7 +33,7 @@ public class CrawlerMain {
 
         mongoDB.initializeDatabaseConnection();
 
-        // fetch the visited pages from the database to continue the crawling process
+        // Fetch the visited pages from the database to continue the crawling process
         // (if it was interrupted)
         visitedPages = mongoDB.getVisitedPages();
         compactStrings = mongoDB.getCompactStrings();
@@ -69,11 +68,11 @@ public class CrawlerMain {
     private static Set<String> fetchSeed() {
         Set<String> seeds = new HashSet<String>();
         try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
-            String URL;
-            while ((URL = br.readLine()) != null) {
-                System.out.println("Seed URL: " + URL); // Test
-                seeds.add(URL);
-                mongoDB.insertOne(new Document("URL", URL), "ToVisit");
+            String Link;
+            while ((Link = br.readLine()) != null) {
+                System.out.println("Seed URL: " + Link); // Test
+                seeds.add(Link);
+                mongoDB.insertOne(new Document("Link", Link), "ToVisit");
             }
             return seeds;
         } catch (IOException e) {
