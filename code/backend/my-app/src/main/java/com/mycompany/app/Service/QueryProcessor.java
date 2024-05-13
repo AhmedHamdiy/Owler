@@ -133,7 +133,7 @@ public class QueryProcessor {
 
         query = query.trim();
 
-        while (cursor.hasNext()) {
+        while (cursor.hasNext() && suggestionDocs.size() < 5) {
             Document prevQueryDoc = cursor.next();
             String prevQuery = prevQueryDoc.getString("Query");
 
