@@ -2,7 +2,7 @@ import React from 'react';
 import '../Styles/style.css';
 import defaultIcon from '../Styles/img/Owl.png';
 function SearchResult({ title, link, snippet, icon }) {
-    const iconSrc = icon ? icon : defaultIcon;
+    const iconSrc = (icon && icon!="code/frontend/src/Styles/def-logo.svg") ? icon : defaultIcon;
 
     return (
         <div className='result-container'>
