@@ -2,7 +2,6 @@ package com.mycompany.app.Crawler;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
-import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -211,7 +210,7 @@ public class CrawlerOwl implements Runnable {
             logoUrl = normalizeURL(logoUrl, doc.baseUri());
             return logoUrl;
         } else {
-            return "code/frontend/src/Styles/def-logo.svg"; // The Default Icon
+            return "code/frontend/src/Styles/img/Owl.png"; // The Default Icon
         }
     }
 

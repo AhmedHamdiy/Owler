@@ -1,6 +1,6 @@
 import React from 'react';
 import '../Styles/style.css';
-import defaultIcon from '../Styles/img/def-logo.svg';
+import defaultIcon from '../Styles/img/Owl.png';
 function SearchResult({ title, link, snippet, icon }) {
     const iconSrc = icon ? icon : defaultIcon;
 
