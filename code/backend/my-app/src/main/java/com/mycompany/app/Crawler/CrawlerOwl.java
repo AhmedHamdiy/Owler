@@ -34,12 +34,12 @@ public class CrawlerOwl implements Runnable {
     // We use LinkedBlockingQueue to ensure multithreading safety when we deal with
     // the pages we want to visit.
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<String>();
-
+    // We use HashSet to store the compact strings of the visited pages to ensure we don't visit the same page twice.
     private Set<String> compactStrings = new HashSet<String>();
 
-    public CrawlerOwl(Set<String> visited, BlockingQueue<String> pendings, Set<String> compact) {
+    public CrawlerOwl(Set<String> visited, BlockingQueue<String> pending, Set<String> compact) {
         visitedPages = visited;
-        pendingPages = pendings;
+        pendingPages = pending;
         compactStrings = compact;
         mongodb.initializeDatabaseConnection();
     }
@@ -116,7 +116,6 @@ public class CrawlerOwl implements Runnable {
         synchronized (mongodb) {
             try {
                 String nextURL = mongodb.getFirstToVisit();
-                //pendingPages.remove(nextURL);
                 if (pendingPages.contains(nextURL))
                     pendingPages.remove(nextURL);
 
@@ -125,6 +124,7 @@ public class CrawlerOwl implements Runnable {
                     // crawl)
                     System.out.println("The " + Thread.currentThread().getName()
                             + " will sleep beacuse it has no pages to crawl\n");
+                    wait();
                 }
                 return nextURL;
             } catch (Exception e) {
@@ -168,7 +168,6 @@ public class CrawlerOwl implements Runnable {
 
                 // Check if the page has been visited before
                 if (visitedPages.contains(url)) {
-
                     if (compactStrings.contains(compactString)) {
                         return null;
                     } else {
@@ -182,7 +181,6 @@ public class CrawlerOwl implements Runnable {
                                         "compactString", compactString),
                                 Updates.set("isIndexed", false), Updates.set("Logo", logo));
                         mongodb.updateDocument(filter, update, "Page");
-
                         return doc;
                     }
                 } else {
@@ -211,9 +209,11 @@ public class CrawlerOwl implements Runnable {
             Element logoElement = logoElements.first();
             String logoUrl = logoElement.attr("href");
             logoUrl = normalizeURL(logoUrl, doc.baseUri());
+            if (logoUrl.startsWith("/"))
+                logoUrl = "/static/media/default-logo.98592a78.svg";
             return logoUrl;
         } else {
-            return "code/frontend/src/Styles/def-logo.svg"; // The Default Icon
+            return "/static/media/default-logo.98592a78.svg"; // The Default Icon
         }
     }
 
@@ -222,7 +222,7 @@ public class CrawlerOwl implements Runnable {
             URI url = new URI(source);
             if (newURL.startsWith("./") || newURL.startsWith("/")) {
                 newURL = newURL.substring(newURL.indexOf('/') + 1);
-                newURL = url.toURL().getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
+                newURL = normalizePath(url) + newURL;
             } else if (newURL.startsWith("javascript:")) // Checks for java pages
                 newURL = null;
             else if (newURL.indexOf('?') != -1) // Ignore queries
@@ -271,7 +271,7 @@ public class CrawlerOwl implements Runnable {
 
                             robotLinks.add(blockedURL);
                         }
-                    }  
+                    }
                     br.close();
                 } catch (MalformedURLException e) {
                     System.err.println("Error In URL : can't read robots.txt for URL: " + myURL.toString());

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Owl from '../Styles/img/OwlLogo.svg'
+import Owl from '../Styles/icons/default-logo.svg'
 import '../Styles/style.css'
 import SearchBar from "../Components/SearchBar.jsx";
 import NotFound from "../Components/NotFound.jsx";

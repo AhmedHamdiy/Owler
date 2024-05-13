@@ -41,18 +41,6 @@ public class CrawlerMain {
 
         if (visitedPages == null) // The crawling process is starting from scratch
         {
-            System.out.println();
-            System.out.println("OLOOOOO");
-            System.out.println("   ");
-            try {
-                int num  = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
-            } catch (NumberFormatException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
             pendingPages = fetchSeed(); // Add the seeds to pending pages
             visitedPages = new HashSet<>();
         }
@@ -86,7 +74,6 @@ public class CrawlerMain {
             String Link;
             while ((Link = br.readLine()) != null) {
                 System.out.println("Seed URL: " + Link); // Test
-                System.out.println("ALOOOOOOO");
                 seeds.add(Link);
                 mongoDB.insertOne(new Document("Link", Link), "ToVisit");
             }
