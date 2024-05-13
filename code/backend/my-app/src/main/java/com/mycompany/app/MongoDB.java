@@ -11,6 +11,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Updates;
 
+import com.mongodb.client.result.UpdateResult;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -43,7 +44,6 @@ public class MongoDB {
     public MongoCollection<Document> pageCollection;
     public MongoCollection<Document> wordCollection;
     public MongoCollection<Document> queryHistoryCollection;
-    public MongoCollection<Document> visitedCollection;
     public MongoCollection<Document> toVisitCollection;
     public PorterStemmer stemmer = new PorterStemmer();
 
@@ -55,7 +55,6 @@ public class MongoDB {
         wordCollection = database.getCollection("Word");
         queryHistoryCollection = database.getCollection("QueryHistory");
         toVisitCollection = database.getCollection("ToVisit");
-        visitedCollection = database.getCollection("Visited");
 
         System.out.println("Connected to Database successfully");
     }
@@ -88,11 +87,6 @@ public class MongoDB {
                 System.out.println("Inserted a document with the following id: "
                         + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
                 break;
-            case "Visited":
-                result = visitedCollection.insertOne(doc);
-                System.out.println("Inserted a document with the following id: "
-                        + Objects.requireNonNull(result.getInsertedId()).asObjectId().getValue());
-                break;
             case "ToVisit":
                 result = toVisitCollection.insertOne(doc);
                 System.out.println("Inserted a document with the following id: "
@@ -111,9 +105,6 @@ public class MongoDB {
             case "QueryHistory":
                 queryHistoryCollection.insertOne(doc);
                 break;
-            case "Visited":
-                visitedCollection.insertOne(doc);
-                break;
             case "ToVisit":
                 toVisitCollection.insertOne(doc);
                 break;
@@ -128,8 +119,6 @@ public class MongoDB {
                 return wordCollection.find(filter).first();
             case "QueryHistory":
                 return queryHistoryCollection.find(filter).first();
-            case "Visited":
-                return visitedCollection.find(filter).first();
             case "ToVisit":
                 return toVisitCollection.find(filter).first();
             default:
@@ -148,9 +137,6 @@ public class MongoDB {
             case "QueryHistory":
                 queryHistoryCollection.replaceOne(filter, doc);
                 break;
-            case "Visited":
-                visitedCollection.replaceOne(filter, doc);
-                break;
             case "ToVisit":
                 toVisitCollection.replaceOne(filter, doc);
                 break;
@@ -168,9 +154,6 @@ public class MongoDB {
             case "QueryHistory":
                 queryHistoryCollection.deleteOne(filter);
                 break;
-            case "Visited":
-                visitedCollection.deleteOne(filter);
-                break;
             case "ToVisit":
                 toVisitCollection.deleteOne(filter);
                 break;
@@ -187,9 +170,6 @@ public class MongoDB {
                 break;
             case "History":
                 queryHistoryCollection.drop();
-                break;
-            case "Visited":
-                visitedCollection.drop();
                 break;
             case "ToVisit":
                 toVisitCollection.drop();
@@ -209,7 +189,7 @@ public class MongoDB {
 
     public Set<String> getVisitedPages() {
         Set<String> visited = new HashSet<String>();
-        visitedCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
+        pageCollection.find().projection(Projections.include("Link")).map(document -> document.getString("Link"))
                 .into(visited);
         return visited.isEmpty() ? null : visited;
     }
@@ -229,11 +209,11 @@ public class MongoDB {
     }
 
     public int checkVisitedThreshold() {
-        return (int) visitedCollection.countDocuments();
+        return (int) pageCollection.countDocuments();
     }
 
     public int checkTotalThreshold() {
-        return (int) toVisitCollection.countDocuments() + (int) visitedCollection.countDocuments();
+        return (int) toVisitCollection.countDocuments() + (int) pageCollection.countDocuments();
     }
 
     public void insertMany(List<Document> ls, String collectionName) {
@@ -254,7 +234,7 @@ public class MongoDB {
                     System.out.println(entry.getValue().asObjectId());
                 }
                 break;
-            case "History":
+            case "QueryHistory":
                 resultmany = queryHistoryCollection.insertMany(ls);
                 for (Map.Entry<Integer, BsonValue> entry : resultmany.getInsertedIds().entrySet()) {
                     System.out.println(entry.getValue().asObjectId());
@@ -444,4 +424,30 @@ public class MongoDB {
     public MongoCursor<Document> getQueryHistory() {
         return queryHistoryCollection.find().iterator();
     }
+
+    public void updateDocument(Bson filter,Bson update, String collectionName)
+    {
+        UpdateResult result;
+        switch (collectionName) {
+            case "Page":
+                result = pageCollection.updateOne(filter,update);
+                System.out.println("Updated a document with the following id: "
+                        + Objects.requireNonNull(result.getUpsertedId()).asObjectId().getValue());
+                break;
+            case "Word":
+                result = wordCollection.updateOne(filter,update);
+                System.out.println("Updated a document with the following id: "
+                        + Objects.requireNonNull(result.getUpsertedId()).asObjectId().getValue());
+                break;
+            case "QueryHistory":
+                result = queryHistoryCollection.updateOne(filter,update);
+                System.out.println("Updated a document with the following id: "
+                        + Objects.requireNonNull(result.getUpsertedId()).asObjectId().getValue());
+                break;
+            case "ToVisit":
+                result = toVisitCollection.updateOne(filter,update);
+                System.out.println("Updated a document with the following id: "
+                        + Objects.requireNonNull(result.getUpsertedId()).asObjectId().getValue());
+                break;
+        }    }
 }
