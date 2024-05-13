@@ -86,12 +86,12 @@ public class CrawlerOwl implements Runnable {
         System.out.println("The " + Thread.currentThread().getName() + " has finished crawling\n");
     }
 
-    public void insertPending(String url) {
+    public void insertPending(String link) {
         synchronized (mongodb) {
-            if (!(pendingPages.contains(url) || visitedPages.contains(url)) && canInsert()) {
+            if (!(pendingPages.contains(link) || visitedPages.contains(link)) && canInsert()) {
                 try {
-                    mongodb.insertOne(new org.bson.Document("URL", url), "ToVisit");
-                    pendingPages.add(url);
+                    mongodb.insertOne(new org.bson.Document("Link", link), "ToVisit");
+                    pendingPages.add(link);
                     mongodb.notifyAll(); // If there was a thread waiting for a page to crawl
                 } catch (Exception e) {
                     System.err.println("Error: error in inserting the pending page..");
@@ -100,11 +100,11 @@ public class CrawlerOwl implements Runnable {
         }
     }
 
-    public void insertVisited(String url) {
+    public void insertVisited(String link) {
         synchronized (mongodb) {
             try {
-                mongodb.insertOne(new org.bson.Document("URL", url), "Visited");
-                visitedPages.add(url);
+                mongodb.insertOne(new org.bson.Document("Link", link), "Visited");
+                visitedPages.add(link);
             } catch (Exception e) {
                 System.err.println("Error: error in inserting the visited page..");
                 e.printStackTrace();
@@ -116,7 +116,10 @@ public class CrawlerOwl implements Runnable {
         synchronized (mongodb) {
             try {
                 String nextURL = mongodb.getFirstToVisit();
-                pendingPages.remove(nextURL);
+                //pendingPages.remove(nextURL);
+                if (pendingPages.contains(nextURL))
+                    pendingPages.remove(nextURL);
+
                 if (nextURL == null) {
                     // No pages to crawl at this time(waits for any other thread to produce urls to
                     // crawl)
@@ -133,7 +136,7 @@ public class CrawlerOwl implements Runnable {
     }
 
     public boolean continueCrawling() {
-        if (visitedPages == null)
+        if (pendingPages == null)
             return true;
         else
             synchronized (mongodb) {
@@ -268,7 +271,7 @@ public class CrawlerOwl implements Runnable {
 
                             robotLinks.add(blockedURL);
                         }
-                    }
+                    }  
                     br.close();
                 } catch (MalformedURLException e) {
                     System.err.println("Error In URL : can't read robots.txt for URL: " + myURL.toString());

@@ -14,8 +14,8 @@ import com.mycompany.app.MongoDB;
 public class CrawlerMain {
     static MongoDB mongoDB = new MongoDB();
     public static Set<String> visitedPages;
-    public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
-    public static final String SEED_FILE = "D:\\Study\\Department\\CMP\\Year-Two\\Second Term\\APT\\Crowler\\code\\backend\\my-app\\src\\seed.txt";
+    public static BlockingQueue<String> pendingPages;
+    public static final String SEED_FILE = "code\\backend\\my-app\\src\\seed.txt";
     private static Set<String> compactStrings;
 
     public static void main(String[] args) {
@@ -41,6 +41,18 @@ public class CrawlerMain {
 
         if (visitedPages == null) // The crawling process is starting from scratch
         {
+            System.out.println();
+            System.out.println("OLOOOOO");
+            System.out.println("   ");
+            try {
+                int num  = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
+            } catch (NumberFormatException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             pendingPages = fetchSeed(); // Add the seeds to pending pages
             visitedPages = new HashSet<>();
         }
@@ -74,6 +86,7 @@ public class CrawlerMain {
             String Link;
             while ((Link = br.readLine()) != null) {
                 System.out.println("Seed URL: " + Link); // Test
+                System.out.println("ALOOOOOOO");
                 seeds.add(Link);
                 mongoDB.insertOne(new Document("Link", Link), "ToVisit");
             }
@@ -83,5 +96,4 @@ public class CrawlerMain {
             return null;
         }
     }
-
 }

@@ -181,7 +181,7 @@ public class MongoDB {
         Document firstToVisit = toVisitCollection.find().limit(1).first();
         if (firstToVisit != null) {
             toVisitCollection.deleteOne(firstToVisit);
-            return firstToVisit.getString("URL");
+            return firstToVisit.getString("Link");
         } else {
             return null;
         }
@@ -203,7 +203,7 @@ public class MongoDB {
 
     public BlockingQueue<String> getPendingPages() {
         BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
-        toVisitCollection.find().projection(Projections.include("URL")).map(document -> document.getString("URL"))
+        toVisitCollection.find().projection(Projections.include("Link")).map(document -> document.getString("Link"))
                 .into(pendingPages);
         return pendingPages;
     }
