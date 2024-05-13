@@ -21,6 +21,10 @@ public class Ranker {
         mongoDB.initializeDatabaseConnection();
     }
 
+    public void rankResultPages() {
+        
+    }
+
     public void sortPages(List<Document> unsortedResult) {
         unsortedResult.sort(new Comparator<Document>() {
             @Override

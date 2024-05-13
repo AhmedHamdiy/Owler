@@ -1,6 +1,6 @@
 # Owler
 <p align="center">
-  <img src="./code/frontend/src/Styles/Owl.png" alt="Owler">
+  <img src="./code/frontend/src/Styles/img/Owl.png" alt="Owler">
 </p>
 
 ---
