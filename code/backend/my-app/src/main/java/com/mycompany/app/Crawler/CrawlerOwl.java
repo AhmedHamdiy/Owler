@@ -1,5 +1,9 @@
 package com.mycompany.app.Crawler;
 
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -74,7 +78,7 @@ public class CrawlerOwl implements Runnable {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Error: error in normalizing the link ..");
+                System.err.println("Error: error in normalizing the link ......!!!");
             }
         }
         mongodb.closeConnection();
@@ -111,6 +115,7 @@ public class CrawlerOwl implements Runnable {
         synchronized (mongodb) {
             try {
                 String nextURL = mongodb.getFirstToVisit();
+                pendingPages.remove(nextURL);
                 if (nextURL == null) {
                     // No pages to crawl at this time(waits for any other thread to produce urls to
                     // crawl)
@@ -157,24 +162,34 @@ public class CrawlerOwl implements Runnable {
                 String logo = extractLogo(doc); // Extract logo from the document
 
                 // Check if the page has been visited before
-                org.bson.Document visitedDoc = mongodb.findOne(new org.bson.Document("Link", url), "Visited");
-                if (visitedDoc != null) {
-                    String storedCompactString = visitedDoc.getString("compactString");
-                    if (storedCompactString.equals(compactString)) {
-                        // If the content hasn't changed, don't insert it again
+                if (visitedPages.contains(url)) {
+
+                    if (compactStrings.contains(compactString)) {
                         return null;
                     } else {
-                        // If the content has changed, remove the stored document
-                        mongodb.deleteOne(new org.bson.Document("Link", url), "Page");
+                        org.bson.Document visitedDoc = mongodb.findOne(new org.bson.Document("Link", url), "Page");
+                        String storedCompactString = visitedDoc.getString("compactString");
+                        compactStrings.remove(storedCompactString);
+                        compactStrings.add(compactString);
+                        Bson filter = Filters.eq("Link", url);
+                        Bson update = Updates.combine(Updates.set("Title", title), Updates.set("HTML", HTMLPage),
+                                Updates.set(
+                                        "compactString", compactString),
+                                Updates.set("isIndexed", false), Updates.set("Logo", logo));
+                        mongodb.updateDocument(filter, update, "Page");
+
+                        return doc;
                     }
+                } else {
+                    // Insert the new version of the page into the database
+                    compactStrings.add(compactString);
+                    visitedPages.add(url);
+                    mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
+                            .append("HTML", HTMLPage).append("compactString", compactString)
+                            .append("isIndexed", false).append("Logo", logo), "Page");
+
+                    return doc;
                 }
-
-                // Insert the new version of the page into the database
-                mongodb.insertOne(new org.bson.Document("Link", url).append("Title", title)
-                        .append("HTML", HTMLPage).append("compactString", compactString)
-                        .append("isIndexed", false).append("Logo", logo), "Page");
-
-                return doc;
             } else
                 return null;
         } catch (IOException e) {
@@ -190,9 +205,10 @@ public class CrawlerOwl implements Runnable {
         if (!logoElements.isEmpty()) {
             Element logoElement = logoElements.first();
             String logoUrl = logoElement.attr("href");
+            logoUrl = normalizeURL(logoUrl, doc.baseUri());
             return logoUrl;
         } else {
-            return "code/frontend/src/Styles/Owl.png"; // The Default Icon
+            return "code/frontend/src/Styles/def-logo.svg"; // The Default Icon
         }
     }
 
@@ -206,6 +222,8 @@ public class CrawlerOwl implements Runnable {
                 newURL = null;
             else if (newURL.indexOf('?') != -1) // Ignore queries
                 newURL = newURL.substring(0, newURL.indexOf('?'));
+            else if (newURL.startsWith("#")) // Ignore anchors (fragments)
+                newURL = newURL.substring(0, newURL.indexOf('#'));
             return newURL;
         } catch (Exception e) {
             System.err.println("Error: error in normalizing the link: " + newURL + " ..");

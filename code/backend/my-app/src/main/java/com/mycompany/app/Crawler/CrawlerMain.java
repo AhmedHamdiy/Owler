@@ -15,7 +15,7 @@ public class CrawlerMain {
     static MongoDB mongoDB = new MongoDB();
     public static Set<String> visitedPages;
     public static BlockingQueue<String> pendingPages = new LinkedBlockingQueue<>();
-    public static final String SEED_FILE = "code\\backend\\my-app\\src\\seed.txt";
+    public static final String SEED_FILE = "D:\\Study\\Department\\CMP\\Year-Two\\Second Term\\APT\\Crowler\\code\\backend\\my-app\\src\\seed.txt";
     private static Set<String> compactStrings;
 
     public static void main(String[] args) {
@@ -40,7 +40,10 @@ public class CrawlerMain {
         pendingPages = mongoDB.getPendingPages();
 
         if (visitedPages == null) // The crawling process is starting from scratch
-            visitedPages = fetchSeed(); // Add the seeds to pending pages
+        {
+            pendingPages = fetchSeed(); // Add the seeds to pending pages
+            visitedPages = new HashSet<>();
+        }
         // Feeding our owls to start the crawling process
         Thread[] threads = new Thread[threadNum];
         for (int i = 0; i < threadNum; i++) {
@@ -65,8 +68,8 @@ public class CrawlerMain {
         mongoDB.closeConnection();
     }
 
-    private static Set<String> fetchSeed() {
-        Set<String> seeds = new HashSet<String>();
+    private static BlockingQueue<String> fetchSeed() {
+        BlockingQueue<String> seeds = new LinkedBlockingQueue<String>();
         try (BufferedReader br = new BufferedReader(new FileReader(SEED_FILE))) {
             String Link;
             while ((Link = br.readLine()) != null) {
