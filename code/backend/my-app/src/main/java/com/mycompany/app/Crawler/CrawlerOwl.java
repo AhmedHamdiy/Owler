@@ -16,7 +16,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.*;
@@ -64,9 +65,9 @@ public class CrawlerOwl implements Runnable {
             try {
                 org.jsoup.nodes.Document doc = visitPage(nextURL);
                 if (doc != null) {
-                    Elements elements = doc.select("a[href]"); // select all <a> tags that has the href attribute
+                    Elements elements = doc.select("a[href]"); // Select all <a> tags that has the href attribute
                     for (Element tag : elements) {
-                        String url = tag.attr("href"); // get the value of href attribute (URL)
+                        String url = tag.attr("href"); // Get the value of href attribute (URL)
                         url = normalizeURL(url, nextURL);
                         try {
                             if (url != null) {
@@ -126,7 +127,7 @@ public class CrawlerOwl implements Runnable {
             } catch (Exception e) {
 
                 System.err.print("Error: error in getting the next page..");
-                return null; // An error has occured
+                return null; // An error has occurred
             }
         }
     }
@@ -146,7 +147,8 @@ public class CrawlerOwl implements Runnable {
         }
     }
 
-    private org.jsoup.nodes.Document visitPage(String url) {
+    private org.jsoup.nodes.Document visitPage(String url)
+            throws IOException, NoSuchAlgorithmException, URISyntaxException {
         try {
             if (!isSafe(url))
                 return null;
@@ -214,10 +216,10 @@ public class CrawlerOwl implements Runnable {
 
     private String normalizeURL(String newURL, String source) {
         try {
-            URL url = new URL(source);
+            URI url = new URI(source);
             if (newURL.startsWith("./") || newURL.startsWith("/")) {
                 newURL = newURL.substring(newURL.indexOf('/') + 1);
-                newURL = url.getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
+                newURL = url.toURL().getProtocol() + "://" + url.getAuthority() + normalizePath(url) + newURL;
             } else if (newURL.startsWith("javascript:")) // Checks for java pages
                 newURL = null;
             else if (newURL.indexOf('?') != -1) // Ignore queries
@@ -232,17 +234,17 @@ public class CrawlerOwl implements Runnable {
 
     }
 
-    private static URL normalizePath(URL url) throws MalformedURLException {
-        String path = url.getPath();
+    private static URI normalizePath(URI link) throws MalformedURLException, URISyntaxException {
+        String path = link.getPath();
         if (path == null || path.length() == 0) {
-            return new URL(url.getProtocol(), url.getHost(), "/");
+            return new URI(link.toURL().getProtocol(), link.getHost(), "/");
         }
-        return url;
+        return link;
     }
 
-    public Boolean isSafe(String url) {
+    public Boolean isSafe(String url) throws URISyntaxException {
         try {
-            URL myURL = new URL(url);
+            URI myURL = new URI(url);
             Set<String> blockedLinks = null;
 
             if (blocked.containsKey(myURL.toString())) {
@@ -252,10 +254,9 @@ public class CrawlerOwl implements Runnable {
                 Set<String> robotLinks = new HashSet<>();
 
                 try {
-                    URL robotsTextFile = new URL(myURL.getProtocol() + "://" + myURL.getHost() + "/robots.txt");
-
+                    URI robotsTextFile = new URI(myURL.toURL().getProtocol() + "://" + myURL.getHost() + "/robots.txt");
                     String line;
-                    BufferedReader br = new BufferedReader(new InputStreamReader(robotsTextFile.openStream()));
+                    BufferedReader br = new BufferedReader(new InputStreamReader(robotsTextFile.toURL().openStream()));
 
                     while ((line = br.readLine()) != null) {
                         line = line.trim();
@@ -263,14 +264,14 @@ public class CrawlerOwl implements Runnable {
 
                         if (userAgentStatus && line.startsWith("Disallow:")) {
                             String blockedPath = line.substring(10).trim();
-                            String blockedURL = myURL.getProtocol() + "://" + myURL.getHost() + blockedPath;
+                            String blockedURL = myURL.toURL().getProtocol() + "://" + myURL.getHost() + blockedPath;
 
                             robotLinks.add(blockedURL);
                         }
                     }
                     br.close();
                 } catch (MalformedURLException e) {
-                    System.err.println("Error: can't read robots.txt for URL: " + myURL.toString());
+                    System.err.println("Error In URL : can't read robots.txt for URL: " + myURL.toString());
                     return false;
                 } catch (IOException e) {
                     System.err.println("Error: can't read URL: " + myURL.toString());
@@ -290,7 +291,7 @@ public class CrawlerOwl implements Runnable {
                 }
             }
             return true;
-        } catch (MalformedURLException e) {
+        } catch (URISyntaxException e) {
             System.err.println();
             return false;
         }
